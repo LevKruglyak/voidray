@@ -1,32 +1,51 @@
 use hatchery::{
     engine::{Engine, EngineApi, EngineOptions, Hatchery, WindowOptions},
-    gui::{egui_implementation::EguiImplementation, imgui_implementation::ImguiImplementation},
+    gui::egui_implementation::EguiImplementation,
 };
-use imgui::Context;
+pub(crate) use log::*;
+use simplelog::*;
 use vulkano::{
     command_buffer::{AutoCommandBufferBuilder, SecondaryAutoCommandBuffer},
     pipeline::graphics::viewport::Viewport,
 };
 use winit::dpi::LogicalSize;
+use viewport_pipeline::ViewportPipeline;
 
-mod graphics;
-// mod test_pipeline;
+mod core;
+mod viewport_pipeline;
 
-#[derive(Default)]
 struct VoidrayEngine {
-    test: f32,
+    pipeline: ViewportPipeline,
 }
 
 impl Engine<EguiImplementation> for VoidrayEngine {
-    fn immediate(&mut self, context: &mut egui::Context, api: &mut EngineApi) {
-        egui::SidePanel::left("left_panel").show(context, |ui| {
-            ui.heading("Side panel");
-        });
+    fn init(api: &mut EngineApi) -> Self {
+        // Initialize logging
+        CombinedLogger::init(vec![TermLogger::new(
+            LevelFilter::Debug,
+            Config::default(),
+            TerminalMode::Mixed,
+            ColorChoice::Auto,
+        )])
+        .expect("failed to initialize logging");
 
-        egui::Window::new("Testing").show(context, |ui| {
-            ui.label("Hello, World!");
-            ui.label(format!("Device: {}", api.device_name()));
-            ui.add(egui::Slider::new(&mut self.test, 0.0..=1.0));
+        Self {
+            pipeline: ViewportPipeline::new(api.graphics_queue(), api.viewport_subpass()),
+        }
+    }
+
+    fn start(&mut self, api: &mut EngineApi) {
+        info!(
+            "Using {:?} card: {}",
+            api.context.device_type(),
+            api.context.device_name()
+        );
+    }
+
+    fn immediate(&mut self, context: &mut egui::Context, api: &mut EngineApi) {
+        egui::SidePanel::left("left_panel").min_width(200.0).show(context, |ui| {
+            ui.heading("Render Settings");
+            ui.separator();
         });
     }
 
@@ -35,7 +54,7 @@ impl Engine<EguiImplementation> for VoidrayEngine {
         builder: &mut AutoCommandBufferBuilder<SecondaryAutoCommandBuffer>,
         viewport: Viewport,
     ) {
-
+        self.pipeline.draw(builder, viewport);
     }
 }
 
@@ -43,12 +62,10 @@ fn main() {
     let options = EngineOptions {
         window_options: WindowOptions {
             title: "Voidray Engine",
-            dimensions: LogicalSize::new(800, 800),
+            dimensions: LogicalSize::new(1200, 800),
         },
         ..EngineOptions::default()
     };
 
-    let engine = VoidrayEngine::default();
-
-    Hatchery::run(options, engine);
+    Hatchery::<VoidrayEngine, _>::run(options);
 }

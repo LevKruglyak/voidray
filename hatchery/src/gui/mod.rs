@@ -9,7 +9,7 @@ use winit::{event::WindowEvent, window::Window};
 #[cfg(feature = "egui")]
 pub mod egui_implementation;
 
-// #[cfg(feature = "imgui")]
+#[cfg(feature = "imgui")]
 pub mod imgui_implementation;
 
 // An abstraction layer over the gui library to allow for easier switching between two libraries

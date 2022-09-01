@@ -4,10 +4,7 @@ use vulkano::{
     buffer::BufferUsage,
     buffer::{CpuAccessibleBuffer, TypedBufferAccess},
     command_buffer::AutoCommandBufferBuilder,
-    command_buffer::{
-        CommandBufferInheritanceInfo, CommandBufferUsage, SecondaryAutoCommandBuffer,
-    },
-    descriptor_set::PersistentDescriptorSet,
+    command_buffer::SecondaryAutoCommandBuffer,
     device::Queue,
     pipeline::{
         graphics::{
@@ -15,60 +12,62 @@ use vulkano::{
             vertex_input::BuffersDefinition,
             viewport::{Viewport, ViewportState},
         },
-        GraphicsPipeline, Pipeline, PipelineBindPoint,
+        GraphicsPipeline,
     },
     render_pass::Subpass,
-    sampler::{Sampler, SamplerCreateInfo},
 };
+use vulkano::impl_vertex;
 
+#[allow(clippy::needless_question_mark)]
 mod vs {
     vulkano_shaders::shader! {
         ty: "vertex",
         src: "
 #version 450
-layout(location = 0) in vec3 position;
+layout(location = 0) in vec2 position;
+layout(location = 1) in vec2 uv;
 
-// layout(set = 0, binding = 0) uniform Data {
-//     mat4 proj;
-// } uniforms;
-//
-// void main() {
-//     gl_Position = uniforms.proj * vec4(position, 1.0);
-// }
+layout(location = 0) out vec2 f_uv;
+
 void main() {
-    gl_Position = vec4(position, 1.0);
+    gl_Position = vec4(position, 0.0, 1.0);
+    f_uv = uv;
 }"
     }
 }
 
+#[allow(clippy::needless_question_mark)]
 mod fs {
     vulkano_shaders::shader! {
         ty: "fragment",
         src: "
 #version 450
+
+layout(location = 0) in vec2 f_uv;
 layout(location = 0) out vec4 f_color;
 
 void main() {
-    f_color = vec4(0.0, 0.0, 0.0, 1.0);
+    f_color = vec4(sin(100.0 * f_uv), f_uv.x, 1.0);
 }"
     }
 }
 
-// #[repr(C)]
-// #[derive(Clone, Copy, Zeroable, Pod)]
-// pub struct UniformData {
-//      projection: Mat4f,
-// }
+#[repr(C)]
+#[derive(Default, Pod, Zeroable, Clone, Copy)]
+struct QuadVertex {
+    position: [f32; 2],
+    uv: [f32; 2],
+}
 
-pub struct TestPipeline {
-    graphics_queue: Arc<Queue>,
+impl_vertex!(QuadVertex, position, uv);
+
+pub struct ViewportPipeline {
     pipeline: Arc<GraphicsPipeline>,
-    subpass: Subpass,
-    vertex_buffer: Arc<CpuAccessibleBuffer<[Vertex3f]>>,
+    vertex_buffer: Arc<CpuAccessibleBuffer<[QuadVertex]>>,
     index_buffer: Arc<CpuAccessibleBuffer<[u32]>>,
 }
 
-impl TestPipeline {
+impl ViewportPipeline {
     pub fn new(graphics_queue: Arc<Queue>, subpass: Subpass) -> Self {
         let pipeline = {
             let vs =
@@ -77,14 +76,14 @@ impl TestPipeline {
                 fs::load(graphics_queue.device().clone()).expect("failed to create shader module");
 
             GraphicsPipeline::start()
-                .vertex_input_state(BuffersDefinition::new().vertex::<Vertex3f>())
+                .vertex_input_state(BuffersDefinition::new().vertex::<QuadVertex>())
                 .vertex_shader(vs.entry_point("main").unwrap(), ())
                 .fragment_shader(fs.entry_point("main").unwrap(), ())
                 .input_assembly_state(
                     InputAssemblyState::new().topology(PrimitiveTopology::TriangleList),
                 )
                 .viewport_state(ViewportState::viewport_dynamic_scissor_irrelevant())
-                .render_pass(subpass.clone())
+                .render_pass(subpass)
                 .build(graphics_queue.device().clone())
                 .expect("failed to make pipeline")
         };
@@ -94,14 +93,21 @@ impl TestPipeline {
             BufferUsage::all(),
             false,
             [
-                Vertex3f {
-                    position: [1.0, 0.0, 0.0],
+                QuadVertex {
+                    position: [-1.0, -1.0],
+                    uv: [0.0, 0.0],
                 },
-                Vertex3f {
-                    position: [0.0, 1.0, 0.0],
+                QuadVertex {
+                    position: [-1.0, 1.0],
+                    uv: [0.0, 1.0],
                 },
-                Vertex3f {
-                    position: [0.0, 0.0, 1.0],
+                QuadVertex {
+                    position: [1.0, 1.0],
+                    uv: [1.0, 1.0],
+                },
+                QuadVertex {
+                    position: [1.0, -1.0],
+                    uv: [1.0, 0.0],
                 },
             ]
             .iter()
@@ -113,47 +119,27 @@ impl TestPipeline {
             graphics_queue.device().clone(),
             BufferUsage::all(),
             false,
-            [0, 1, 2].iter().cloned(),
+            [0, 2, 1, 0, 3, 2].iter().cloned(),
         )
         .expect("failed to create buffer");
 
         Self {
-            graphics_queue,
             pipeline,
-            subpass,
             vertex_buffer,
             index_buffer,
         }
     }
 
-    pub fn draw(&mut self) -> SecondaryAutoCommandBuffer {
-        let mut builder = AutoCommandBufferBuilder::secondary(
-            self.graphics_queue.device().clone(),
-            self.graphics_queue.family(),
-            CommandBufferUsage::MultipleSubmit,
-            CommandBufferInheritanceInfo {
-                render_pass: Some(self.subpass.clone().into()),
-                ..Default::default()
-            },
-        )
-        .expect("failed to make secondary command buffer");
-
+    pub fn draw(&mut self, builder: &mut AutoCommandBufferBuilder<SecondaryAutoCommandBuffer>, viewport: Viewport) {
         builder
             .bind_pipeline_graphics(self.pipeline.clone())
-            // .bind_descriptor_sets(PipelineBindPoint::Graphics, pipeline_layout, first_set, descriptor_sets)
             .bind_vertex_buffers(0, self.vertex_buffer.clone())
             .bind_index_buffer(self.index_buffer.clone())
             .set_viewport(
                 0,
-                vec![Viewport {
-                    origin: [0.0, 0.0],
-                    dimensions: [1000.0, 1000.0],
-                    depth_range: 0.0..1.0,
-                }],
+                vec![viewport],
             )
             .draw_indexed(self.index_buffer.len() as u32, 1, 0, 0, 0)
             .unwrap();
-
-        builder.build().expect("failed to build command buffer")
     }
 }

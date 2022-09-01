@@ -25,4 +25,8 @@ lazy_static = "1.4"
 rand = "0.8"
 bytemuck = { version = "1.7", features = ["derive", "extern_crate_std", "min_const_generics"] }
 
+# Log
+simplelog = "0.12"
+log = "0.4"
+
 hatchery = { path = "../hatchery", features = ["egui"] }

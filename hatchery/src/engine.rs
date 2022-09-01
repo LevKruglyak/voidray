@@ -66,17 +66,21 @@ impl Default for EngineOptions {
 }
 
 /// Wrapper struct for engine methods
-pub struct Hatchery {}
+pub struct Hatchery<E, G> {
+    _pd: std::marker::PhantomData<(E, G)>,
+}
 
-impl Hatchery {
+impl<E, G> Hatchery<E, G>
+where
+    E: Engine<G> + 'static,
+    G: GuiImplementation + 'static,
+{
     /// Start the engine loop, open the window, initialize all of the graphics contexts
-    pub fn run<E, G>(options: EngineOptions, mut engine: E)
-    where
-        E: Engine<G> + 'static,
-        G: GuiImplementation + 'static,
-    {
+    pub fn run(options: EngineOptions) {
         let event_loop = EventLoop::new();
         let mut context = EngineContext::<G>::new(options, &event_loop);
+
+        let mut engine = E::init(&mut context.api);
 
         engine.start(&mut context.api);
 
@@ -119,7 +123,7 @@ impl Hatchery {
         });
     }
 
-    fn render<G, E>(engine: &mut  E, context: &mut EngineContext<G>)
+    fn render(engine: &mut E, context: &mut EngineContext<G>)
     where
         G: GuiImplementation + 'static,
         E: Engine<G> + 'static,
@@ -165,7 +169,7 @@ impl Hatchery {
 
 /// Contains input system, performance, some graphics objects
 pub struct EngineApi {
-    context: VulkanoContext,
+    pub context: VulkanoContext,
     pub surface: Arc<Surface<Window>>,
     pub performance: EnginePerformance,
     render_pass: FinalRenderPass,
@@ -288,7 +292,11 @@ pub trait Engine<G>
 where
     G: GuiImplementation,
 {
-    /// Called on initialization
+    /// Called right after the vulkano context is created
+    #[allow(unused_variables)]
+    fn init(api: &mut EngineApi) -> Self;
+
+    /// Called after initialization
     #[allow(unused_variables)]
     fn start(&mut self, api: &mut EngineApi) {}
 
