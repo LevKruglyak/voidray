@@ -1,0 +1,28 @@
+[package]
+name = "voidray"
+description = ""
+version = "0.1.0"
+edition = "2021"
+# license-file = "LICENSE.md"
+authors = ["Lev Kruglyak <lev.kruglyak2014@gmail.com>"]
+
+[dependencies]
+# Gui
+egui = "0.18"
+egui_demo_lib = "0.18"
+egui_winit_vulkano = "0.18"
+imgui = "0.8"
+winit = "0.26"
+
+# Vulkano dependencies
+vulkano = "0.30"
+vulkano-util = "0.30"
+vulkano-win = "0.30"
+vulkano-shaders = "0.30"
+
+# Utils
+lazy_static = "1.4"
+rand = "0.8"
+bytemuck = { version = "1.7", features = ["derive", "extern_crate_std", "min_const_generics"] }
+
+hatchery = { path = "../hatchery", features = ["egui"] }
