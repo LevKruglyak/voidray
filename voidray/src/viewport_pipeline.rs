@@ -1,5 +1,6 @@
 use bytemuck::{Pod, Zeroable};
 use std::sync::Arc;
+use vulkano::impl_vertex;
 use vulkano::{
     buffer::BufferUsage,
     buffer::{CpuAccessibleBuffer, TypedBufferAccess},
@@ -16,7 +17,6 @@ use vulkano::{
     },
     render_pass::Subpass,
 };
-use vulkano::impl_vertex;
 
 #[allow(clippy::needless_question_mark)]
 mod vs {
@@ -130,15 +130,16 @@ impl ViewportPipeline {
         }
     }
 
-    pub fn draw(&mut self, builder: &mut AutoCommandBufferBuilder<SecondaryAutoCommandBuffer>, viewport: Viewport) {
+    pub fn draw(
+        &mut self,
+        builder: &mut AutoCommandBufferBuilder<SecondaryAutoCommandBuffer>,
+        viewport: Viewport,
+    ) {
         builder
             .bind_pipeline_graphics(self.pipeline.clone())
             .bind_vertex_buffers(0, self.vertex_buffer.clone())
             .bind_index_buffer(self.index_buffer.clone())
-            .set_viewport(
-                0,
-                vec![viewport],
-            )
+            .set_viewport(0, vec![viewport])
             .draw_indexed(self.index_buffer.len() as u32, 1, 0, 0, 0)
             .unwrap();
     }
