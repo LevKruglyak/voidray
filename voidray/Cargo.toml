@@ -29,4 +29,7 @@ bytemuck = { version = "1.7", features = ["derive", "extern_crate_std", "min_con
 simplelog = "0.12"
 log = "0.4"
 
+# Concurrency
+crossbeam = "0.8"
+
 hatchery = { path = "../hatchery", features = ["egui"] }
