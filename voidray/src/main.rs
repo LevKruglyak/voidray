@@ -120,7 +120,7 @@ impl Engine<EguiImplementation> for VoidrayEngine {
         viewport: Viewport,
     ) {
         let samples = self.renderer.sample_count();
-        self.pipeline.draw(builder, samples.1 as f32 / samples.0 as f32, viewport);
+        self.pipeline.draw(builder, viewport);
     }
 }
 

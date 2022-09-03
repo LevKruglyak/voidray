@@ -1,11 +1,11 @@
+use crossbeam::channel::{bounded, Sender};
+use rand::thread_rng;
+use rand::{distributions::Uniform, prelude::Distribution};
 use std::{
     sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard},
     thread,
     time::Duration,
 };
-use rand::{distributions::Uniform, prelude::Distribution};
-use crossbeam::channel::{bounded, Sender};
-use rand::thread_rng;
 use vulkano::{
     buffer::cpu_access::WriteLock,
     memory::pool::{PotentialDedicatedAllocation, StdMemoryPoolAlloc},
@@ -51,8 +51,8 @@ impl Renderer {
         let sample_count = Arc::new(RwLock::new((0, 0)));
         let currently_rendering = Arc::new(RwLock::new(false));
 
-        let thread_sample_count = sample_count.clone();
         let thread_currently_rendering = currently_rendering.clone();
+        let thread_sample_count = sample_count.clone();
 
         let thread_device = device.clone();
         let thread_queue = queue.clone();
@@ -73,7 +73,10 @@ impl Renderer {
                         target_write.clear();
                     }
 
-                    for sample in 0..=settings.samples_per_pixel {
+                    let samples_per_run = 1;
+                    let mut samples = 0;
+
+                    while samples < settings.samples_per_pixel {
                         let color: f32 = rand::random();
                         {
                             let mut target_write = target.write().unwrap();
@@ -91,30 +94,46 @@ impl Renderer {
                                     let mut rng = thread_rng();
                                     let range = Uniform::from(0.0..=1.0);
 
-                                    // UV coordinates
-                                    let u = (x as f32 + range.sample(&mut rng)) / (dimensions[0] - 1) as f32;
-                                    let v = (y as f32 + range.sample(&mut rng)) / (dimensions[1] - 1) as f32;
+                                    let mut color = [0.0; 4];
 
-                                    if (u - 0.5) * (u - 0.5) + (v - 0.5) * (v - 0.5) < 0.025 {
-                                        pixel[0] += 1.0 / settings.samples_per_pixel as f32;
-                                        pixel[1] += 1.0 / settings.samples_per_pixel as f32;
-                                        pixel[2] += 1.0 / settings.samples_per_pixel as f32;
+                                    for _ in 0..std::cmp::min(
+                                        samples_per_run,
+                                        settings.samples_per_pixel - samples,
+                                    ) {
+                                        // UV coordinates
+                                        let u = (x as f32 + range.sample(&mut rng))
+                                            / (dimensions[0] - 1) as f32;
+                                        let v = (y as f32 + range.sample(&mut rng))
+                                            / (dimensions[1] - 1) as f32;
+
+                                        if (u - 0.5) * (u - 0.5) + (v - 0.5) * (v - 0.5) < 0.125 {
+                                            color[0] += range.sample(&mut rng);
+                                            color[1] += range.sample(&mut rng);
+                                            color[2] += range.sample(&mut rng);
+                                            color[3] += range.sample(&mut rng);
+                                        }
                                     }
-                                });
 
+                                    pixel[0] += color[0] / settings.samples_per_pixel as f32;
+                                    pixel[1] += color[1] / settings.samples_per_pixel as f32;
+                                    pixel[2] += color[2] / settings.samples_per_pixel as f32;
+                                    pixel[3] += color[3] / settings.samples_per_pixel as f32;
+                                });
+        
+                            samples = std::cmp::min(
+                                samples + samples_per_run,
+                                settings.samples_per_pixel,
+                            );
+                            target_write.samples = (samples, settings.samples_per_pixel);
+                            *thread_sample_count.write().unwrap() = target_write.samples;
                             target_write.synced = false;
                         }
 
-                        // if sample % 10 == 0 {
-                            if let Ok(RenderAction::Cancel) = receiver.try_recv() {
-                                break;
-                            }
+                        if let Ok(RenderAction::Cancel) = receiver.try_recv() {
+                            break;
+                        }
 
-                            thread::sleep(Duration::from_millis(1));
-                        // }
-
-                        *thread_sample_count.write().unwrap() =
-                            (sample, settings.samples_per_pixel);
+                        thread::sleep(Duration::from_millis(settings.sleep_duration as u64));
                     }
 
                     *thread_currently_rendering.write().unwrap() = false;
@@ -152,6 +171,7 @@ pub struct RenderTarget {
     queue: Arc<Queue>,
     buffer: Arc<CpuAccessibleBuffer<[f32]>>,
     dimensions: [u32; 2],
+    samples: (u32, u32),
     synced: bool,
 }
 
@@ -204,6 +224,7 @@ impl RenderTarget {
             queue: context.compute_queue(),
             buffer,
             dimensions,
+            samples: (0, 0),
             synced: false,
         }
     }
@@ -241,6 +262,10 @@ impl RenderTarget {
 
     pub fn needs_sync(&self) -> bool {
         !self.synced
+    }
+
+    pub fn scale(&self) -> f32 {
+        self.samples.1 as f32 / self.samples.0 as f32
     }
 
     pub fn clear(&mut self) {

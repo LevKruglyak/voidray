@@ -23,6 +23,8 @@ use vulkano::{
     render_pass::Subpass,
 };
 
+use self::fs::ty::PostProcessingData;
+
 #[allow(clippy::needless_question_mark)]
 mod vs {
     vulkano_shaders::shader! {
@@ -58,7 +60,7 @@ layout(push_constant) uniform PostProcessingData {
 } ppd;
 
 void main() {
-    f_color = vec4(texture(tex, f_uv).xyz * ppd.scale, 1.0);
+    f_color = vec4(sqrt(texture(tex, f_uv).xyz * ppd.scale), 1.0);
 }"
     }
 }
@@ -79,6 +81,7 @@ pub struct ViewportPipeline {
     graphics_queue: Arc<Queue>,
     vertex_buffer: Arc<CpuAccessibleBuffer<[QuadVertex]>>,
     index_buffer: Arc<CpuAccessibleBuffer<[u32]>>,
+    post_processing_data: PostProcessingData,
 }
 
 impl ViewportPipeline {
@@ -149,22 +152,21 @@ impl ViewportPipeline {
             index_buffer,
             target,
             target_view,
+            post_processing_data: PostProcessingData { scale: 0.0 },
         }
     }
 
     pub fn draw(
         &mut self,
         builder: &mut AutoCommandBufferBuilder<SecondaryAutoCommandBuffer>,
-        scale: f32,
         viewport: Viewport,
     ) {
         if let Ok(mut target) = self.target.try_write() {
             if target.needs_sync() {
                 target.copy_to_view(self.target_view.clone());
+                self.post_processing_data.scale = target.scale();
             }
         }
-
-        let post_processing_data = fs::ty::PostProcessingData { scale };
 
         let descriptor_set = self.create_descriptor_set(self.target_view.view());
         builder
@@ -177,7 +179,7 @@ impl ViewportPipeline {
                 0,
                 descriptor_set,
             )
-            .push_constants(self.pipeline.layout().clone(), 0, post_processing_data)
+            .push_constants(self.pipeline.layout().clone(), 0, self.post_processing_data)
             .set_viewport(0, vec![viewport])
             .draw_indexed(self.index_buffer.len() as u32, 1, 0, 0, 0)
             .unwrap();
