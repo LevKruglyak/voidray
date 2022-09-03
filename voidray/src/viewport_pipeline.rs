@@ -1,6 +1,11 @@
+use crate::core::render::{RenderTarget, RenderTargetView};
 use bytemuck::{Pod, Zeroable};
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
+use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
+use vulkano::image::ImageViewAbstract;
 use vulkano::impl_vertex;
+use vulkano::pipeline::{Pipeline, PipelineBindPoint};
+use vulkano::sampler::{Filter, Sampler, SamplerAddressMode, SamplerCreateInfo};
 use vulkano::{
     buffer::BufferUsage,
     buffer::{CpuAccessibleBuffer, TypedBufferAccess},
@@ -46,8 +51,14 @@ mod fs {
 layout(location = 0) in vec2 f_uv;
 layout(location = 0) out vec4 f_color;
 
+layout(set = 0, binding = 0) uniform sampler2D tex;
+
+layout(push_constant) uniform PostProcessingData {
+  float scale;
+} ppd;
+
 void main() {
-    f_color = vec4(sin(100.0 * f_uv), f_uv.x, 1.0);
+    f_color = vec4(texture(tex, f_uv).xyz * ppd.scale, 1.0);
 }"
     }
 }
@@ -63,12 +74,20 @@ impl_vertex!(QuadVertex, position, uv);
 
 pub struct ViewportPipeline {
     pipeline: Arc<GraphicsPipeline>,
+    target: Arc<RwLock<RenderTarget>>,
+    target_view: Arc<RenderTargetView>,
+    graphics_queue: Arc<Queue>,
     vertex_buffer: Arc<CpuAccessibleBuffer<[QuadVertex]>>,
     index_buffer: Arc<CpuAccessibleBuffer<[u32]>>,
 }
 
 impl ViewportPipeline {
-    pub fn new(graphics_queue: Arc<Queue>, subpass: Subpass) -> Self {
+    pub fn new(
+        graphics_queue: Arc<Queue>,
+        subpass: Subpass,
+        target: Arc<RwLock<RenderTarget>>,
+        target_view: Arc<RenderTargetView>,
+    ) -> Self {
         let pipeline = {
             let vs =
                 vs::load(graphics_queue.device().clone()).expect("failed to create shader module");
@@ -125,22 +144,69 @@ impl ViewportPipeline {
 
         Self {
             pipeline,
+            graphics_queue,
             vertex_buffer,
             index_buffer,
+            target,
+            target_view,
         }
     }
 
     pub fn draw(
         &mut self,
         builder: &mut AutoCommandBufferBuilder<SecondaryAutoCommandBuffer>,
+        scale: f32,
         viewport: Viewport,
     ) {
+        if let Ok(mut target) = self.target.try_write() {
+            if target.needs_sync() {
+                target.copy_to_view(self.target_view.clone());
+            }
+        }
+
+        let post_processing_data = fs::ty::PostProcessingData { scale };
+
+        let descriptor_set = self.create_descriptor_set(self.target_view.view());
         builder
             .bind_pipeline_graphics(self.pipeline.clone())
             .bind_vertex_buffers(0, self.vertex_buffer.clone())
             .bind_index_buffer(self.index_buffer.clone())
+            .bind_descriptor_sets(
+                PipelineBindPoint::Graphics,
+                self.pipeline.layout().clone(),
+                0,
+                descriptor_set,
+            )
+            .push_constants(self.pipeline.layout().clone(), 0, post_processing_data)
             .set_viewport(0, vec![viewport])
             .draw_indexed(self.index_buffer.len() as u32, 1, 0, 0, 0)
             .unwrap();
+    }
+
+    fn create_descriptor_set(
+        &self,
+        viewport_view: Arc<dyn ImageViewAbstract>,
+    ) -> Arc<PersistentDescriptorSet> {
+        let sampler = Sampler::new(
+            self.graphics_queue.device().clone(),
+            SamplerCreateInfo {
+                mag_filter: Filter::Nearest,
+                min_filter: Filter::Linear,
+                address_mode: [SamplerAddressMode::ClampToEdge; 3],
+                ..Default::default()
+            },
+        )
+        .unwrap();
+
+        let layout = self.pipeline.layout().set_layouts().get(0).unwrap();
+        PersistentDescriptorSet::new(
+            layout.clone(),
+            [WriteDescriptorSet::image_view_sampler(
+                0,
+                viewport_view.clone(),
+                sampler,
+            )],
+        )
+        .unwrap()
     }
 }

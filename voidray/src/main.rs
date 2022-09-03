@@ -1,6 +1,7 @@
 #![allow(unused_variables, dead_code)]
 
 use crate::core::render::RenderAction;
+use crate::core::render::RenderTargetView;
 use crate::core::render::Renderer;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -44,16 +45,24 @@ impl Engine<EguiImplementation> for VoidrayEngine {
         )])
         .expect("failed to initialize logging");
 
+        let dimensions = [100, 100];
+
         let scene = Arc::new(RwLock::new(Scene::default()));
-        let target = Arc::new(RwLock::new(RenderTarget::new(&api.context, [100, 100])));
+        let target = Arc::new(RwLock::new(RenderTarget::new(&api.context, dimensions)));
+        let target_view = Arc::new(RenderTargetView::new(&api.context, dimensions));
         let settings = Arc::new(RwLock::new(RenderSettings::default()));
 
         Self {
-            pipeline: ViewportPipeline::new(api.graphics_queue(), api.viewport_subpass()),
+            pipeline: ViewportPipeline::new(
+                api.graphics_queue(),
+                api.viewport_subpass(),
+                target.clone(),
+                target_view,
+            ),
             settings: settings.clone(),
             scene: scene.clone(),
             target: target.clone(),
-            renderer: Renderer::new(scene, target, settings),
+            renderer: Renderer::new(api.device(), api.compute_queue(), scene, target, settings),
         }
     }
 
@@ -110,7 +119,8 @@ impl Engine<EguiImplementation> for VoidrayEngine {
         builder: &mut AutoCommandBufferBuilder<SecondaryAutoCommandBuffer>,
         viewport: Viewport,
     ) {
-        self.pipeline.draw(builder, viewport);
+        let samples = self.renderer.sample_count();
+        self.pipeline.draw(builder, samples.1 as f32 / samples.0 as f32, viewport);
     }
 }
 
@@ -118,7 +128,7 @@ fn main() {
     let options = EngineOptions {
         window_options: WindowOptions {
             title: "Voidray Engine",
-            dimensions: LogicalSize::new(1200, 800),
+            dimensions: LogicalSize::new(1200, 1000),
         },
         ..EngineOptions::default()
     };
