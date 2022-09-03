@@ -1,13 +1,13 @@
 #![allow(unused_variables, dead_code)]
 
-use crate::core::render::RenderAction;
-use crate::core::render::RenderTargetView;
-use crate::core::render::Renderer;
+use crate::render::RenderAction;
+use crate::render::RenderTargetView;
+use crate::render::Renderer;
+use crate::core::tracer::RenderSettings;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-use crate::core::render::RenderSettings;
-use crate::core::render::RenderTarget;
+use crate::render::RenderTarget;
 use crate::core::scene::Scene;
 
 use hatchery::{
@@ -16,15 +16,16 @@ use hatchery::{
 };
 pub use log::*;
 use simplelog::*;
-use viewport_pipeline::ViewportPipeline;
+use pipeline::ViewportPipeline;
 use vulkano::{
     command_buffer::{AutoCommandBufferBuilder, SecondaryAutoCommandBuffer},
     pipeline::graphics::viewport::Viewport,
 };
 use winit::dpi::LogicalSize;
 
+mod render;
 mod core;
-mod viewport_pipeline;
+mod pipeline;
 
 struct VoidrayEngine {
     pipeline: ViewportPipeline,
@@ -89,11 +90,11 @@ impl Engine<EguiImplementation> for VoidrayEngine {
                         ui.label("Samples:");
                         ui.add(egui::Slider::new(&mut settings.samples_per_pixel, 1..=1000));
                     });
+                    let samples_per_pixel = settings.samples_per_pixel;
                     ui.horizontal(|ui| {
-                        ui.label("Sleep duration:");
-                        ui.add(egui::Slider::new(&mut settings.sleep_duration, 1..=10000));
+                        ui.label("Samples per run:");
+                        ui.add(egui::Slider::new(&mut settings.samples_per_run, 1..=samples_per_pixel));
                     });
-                    ui.checkbox(&mut settings.poll_for_canel, "Poll for cancel")
                 });
 
                 ui.horizontal(|ui| {
@@ -102,7 +103,7 @@ impl Engine<EguiImplementation> for VoidrayEngine {
                             self.renderer.execute(RenderAction::Start);
                         }
                     });
-                    ui.add_enabled_ui(currently_rendering && settings.poll_for_canel, |ui| {
+                    ui.add_enabled_ui(currently_rendering, |ui| {
                         if ui.button("Cancel").clicked() {
                             self.renderer.execute(RenderAction::Cancel);
                         }
@@ -110,7 +111,9 @@ impl Engine<EguiImplementation> for VoidrayEngine {
                 });
 
                 let samples = self.renderer.sample_count();
-                ui.label(format!("Samples: {}/{}", samples.0, samples.1));
+                if currently_rendering {
+                    ui.label(format!("Samples: {}/{}", samples.0 - 1, samples.1));
+                }
             });
     }
 

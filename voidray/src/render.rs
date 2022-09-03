@@ -2,7 +2,7 @@ use crossbeam::channel::{bounded, Sender};
 use rand::thread_rng;
 use rand::{distributions::Uniform, prelude::Distribution};
 use std::{
-    sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard},
+    sync::{Arc, RwLock},
     thread,
     time::Duration,
 };
@@ -21,9 +21,11 @@ use vulkano::{
 };
 use vulkano_util::context::VulkanoContext;
 
-use super::scene::Scene;
 use log::*;
 use rayon::prelude::*;
+
+use crate::core::scene::Scene;
+use crate::core::tracer::RenderSettings;
 
 pub enum RenderAction {
     Start,
@@ -61,6 +63,7 @@ impl Renderer {
             loop {
                 if let Ok(RenderAction::Start) = receiver.try_recv() {
                     *thread_currently_rendering.write().unwrap() = true;
+                    info!("started rendering...");
 
                     let settings = {
                         let settings = settings.read().unwrap();
@@ -73,7 +76,44 @@ impl Renderer {
                         target_write.clear();
                     }
 
-                    let samples_per_run = 1;
+                    info!("cleared target");
+
+                    let render_task = |(index, pixel): (usize, &mut [f32]),
+                                       scene,
+                                       settings: &RenderSettings,
+                                       dimensions: [u32; 2],
+                                       num_samples| {
+                        let x = index as u32 % dimensions[0];
+                        let y = index as u32 / dimensions[1];
+
+                        // Set up rng
+                        let mut rng = thread_rng();
+                        let range = Uniform::from(0.0..=1.0);
+
+                        let mut color = [0.0; 4];
+
+                        for _ in 0..num_samples {
+                            // UV coordinates
+                            let u =
+                                (x as f32 + range.sample(&mut rng)) / (dimensions[0] - 1) as f32;
+                            let v =
+                                (y as f32 + range.sample(&mut rng)) / (dimensions[1] - 1) as f32;
+
+                            if (u - 0.5) * (u - 0.5) + (v - 0.5) * (v - 0.5) < 0.125 {
+                                color[0] += range.sample(&mut rng);
+                                color[1] += range.sample(&mut rng);
+                                color[2] += range.sample(&mut rng);
+                                color[3] += range.sample(&mut rng);
+                            }
+                        }
+
+                        pixel[0] += color[0] / settings.samples_per_pixel as f32;
+                        pixel[1] += color[1] / settings.samples_per_pixel as f32;
+                        pixel[2] += color[2] / settings.samples_per_pixel as f32;
+                        pixel[3] += color[3] / settings.samples_per_pixel as f32;
+                    };
+
+                    let samples_per_run = settings.samples_per_run;
                     let mut samples = 0;
 
                     while samples < settings.samples_per_pixel {
@@ -87,39 +127,18 @@ impl Renderer {
                                 .par_chunks_exact_mut(4)
                                 .enumerate()
                                 .for_each(|(index, pixel)| {
-                                    let x = index as u32 % dimensions[0];
-                                    let y = index as u32 / dimensions[1];
-
-                                    // Set up rng
-                                    let mut rng = thread_rng();
-                                    let range = Uniform::from(0.0..=1.0);
-
-                                    let mut color = [0.0; 4];
-
-                                    for _ in 0..std::cmp::min(
-                                        samples_per_run,
-                                        settings.samples_per_pixel - samples,
-                                    ) {
-                                        // UV coordinates
-                                        let u = (x as f32 + range.sample(&mut rng))
-                                            / (dimensions[0] - 1) as f32;
-                                        let v = (y as f32 + range.sample(&mut rng))
-                                            / (dimensions[1] - 1) as f32;
-
-                                        if (u - 0.5) * (u - 0.5) + (v - 0.5) * (v - 0.5) < 0.125 {
-                                            color[0] += range.sample(&mut rng);
-                                            color[1] += range.sample(&mut rng);
-                                            color[2] += range.sample(&mut rng);
-                                            color[3] += range.sample(&mut rng);
-                                        }
-                                    }
-
-                                    pixel[0] += color[0] / settings.samples_per_pixel as f32;
-                                    pixel[1] += color[1] / settings.samples_per_pixel as f32;
-                                    pixel[2] += color[2] / settings.samples_per_pixel as f32;
-                                    pixel[3] += color[3] / settings.samples_per_pixel as f32;
+                                    render_task(
+                                        (index, pixel),
+                                        &scene,
+                                        &settings,
+                                        dimensions,
+                                        std::cmp::min(
+                                            samples_per_run,
+                                            settings.samples_per_pixel - samples,
+                                        ),
+                                    )
                                 });
-        
+
                             samples = std::cmp::min(
                                 samples + samples_per_run,
                                 settings.samples_per_pixel,
@@ -133,8 +152,10 @@ impl Renderer {
                             break;
                         }
 
-                        thread::sleep(Duration::from_millis(settings.sleep_duration as u64));
+                        thread::sleep(Duration::from_millis(1000));
                     }
+
+                    info!("finished rendering...");
 
                     *thread_currently_rendering.write().unwrap() = false;
                 }
@@ -270,35 +291,5 @@ impl RenderTarget {
 
     pub fn clear(&mut self) {
         self.buffer().iter_mut().for_each(|x| *x = 0.0);
-    }
-}
-
-pub fn render(
-    device: Arc<Device>,
-    compute_queue: Arc<Queue>,
-    scene: RwLockReadGuard<Scene>,
-    target: RwLockWriteGuard<RenderTarget>,
-    settings: RenderSettings,
-) {
-    info!("rendering...");
-    info!("{:?}", settings);
-    thread::sleep(Duration::from_millis(settings.sleep_duration as u64));
-    info!("done rendering!");
-}
-
-#[derive(Debug, Clone)]
-pub struct RenderSettings {
-    pub samples_per_pixel: u32,
-    pub sleep_duration: u32,
-    pub poll_for_canel: bool,
-}
-
-impl Default for RenderSettings {
-    fn default() -> Self {
-        Self {
-            samples_per_pixel: 100,
-            sleep_duration: 1000,
-            poll_for_canel: true,
-        }
     }
 }

@@ -1,4 +1,4 @@
-use crate::core::render::{RenderTarget, RenderTargetView};
+use crate::render::{RenderTarget, RenderTargetView};
 use bytemuck::{Pod, Zeroable};
 use std::sync::{Arc, RwLock};
 use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
