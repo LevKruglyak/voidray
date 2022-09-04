@@ -24,8 +24,9 @@ use vulkano_util::context::VulkanoContext;
 use log::*;
 use rayon::prelude::*;
 
-use crate::core::scene::Scene;
-use crate::core::tracer::RenderSettings;
+use crate::core::scene::{Scene, SceneAcceleration};
+use crate::core::tracer::{RenderSettings, trace_ray};
+use crate::utils::color::Color;
 
 pub enum RenderAction {
     Start,
@@ -70,18 +71,27 @@ impl Renderer {
                         settings.clone()
                     };
 
-                    //Perform the render
-                    {
+                    let dimensions = {
                         let mut target_write = target.write().unwrap();
                         target_write.clear();
-                    }
+
+                        *thread_sample_count.write().unwrap() = (0, settings.samples_per_pixel);
+                        target_write.samples = (0, settings.samples_per_pixel);
+
+                        target_write.dimensions
+                    };
 
                     info!("cleared target");
 
-                    let render_task = |(index, pixel): (usize, &mut [f32]),
-                                       scene,
-                                       settings: &RenderSettings,
-                                       dimensions: [u32; 2],
+                    // Build acceleration structures
+                    let scene_accel = {
+                        scene.write().unwrap().into_acceleration()
+                    };
+
+                    info!("build acceleration structures");
+
+                    let settings_ref = &settings;
+                    let render_task = move |(index, pixel): (usize, &mut [f32]),
                                        num_samples| {
                         let x = index as u32 % dimensions[0];
                         let y = index as u32 / dimensions[1];
@@ -90,7 +100,7 @@ impl Renderer {
                         let mut rng = thread_rng();
                         let range = Uniform::from(0.0..=1.0);
 
-                        let mut color = [0.0; 4];
+                        let mut color = Color::new(0.0, 0.0, 0.0);
 
                         for _ in 0..num_samples {
                             // UV coordinates
@@ -99,18 +109,14 @@ impl Renderer {
                             let v =
                                 (y as f32 + range.sample(&mut rng)) / (dimensions[1] - 1) as f32;
 
-                            if (u - 0.5) * (u - 0.5) + (v - 0.5) * (v - 0.5) < 0.125 {
-                                color[0] += range.sample(&mut rng);
-                                color[1] += range.sample(&mut rng);
-                                color[2] += range.sample(&mut rng);
-                                color[3] += range.sample(&mut rng);
-                            }
+                            color += trace_ray(&scene_accel, settings_ref, u, v);
                         }
 
-                        pixel[0] += color[0] / settings.samples_per_pixel as f32;
-                        pixel[1] += color[1] / settings.samples_per_pixel as f32;
-                        pixel[2] += color[2] / settings.samples_per_pixel as f32;
-                        pixel[3] += color[3] / settings.samples_per_pixel as f32;
+                        color *= 1.0 / settings.samples_per_pixel as f32;
+
+                        pixel[0] += color.r;
+                        pixel[1] += color.g;
+                        pixel[2] += color.b;
                     };
 
                     let samples_per_run = settings.samples_per_run;
@@ -118,9 +124,9 @@ impl Renderer {
 
                     while samples < settings.samples_per_pixel {
                         let color: f32 = rand::random();
+
                         {
                             let mut target_write = target.write().unwrap();
-                            let dimensions = target_write.dimensions;
 
                             target_write
                                 .buffer()
@@ -129,9 +135,6 @@ impl Renderer {
                                 .for_each(|(index, pixel)| {
                                     render_task(
                                         (index, pixel),
-                                        &scene,
-                                        &settings,
-                                        dimensions,
                                         std::cmp::min(
                                             samples_per_run,
                                             settings.samples_per_pixel - samples,
@@ -143,8 +146,9 @@ impl Renderer {
                                 samples + samples_per_run,
                                 settings.samples_per_pixel,
                             );
-                            target_write.samples = (samples, settings.samples_per_pixel);
+
                             *thread_sample_count.write().unwrap() = target_write.samples;
+                            target_write.samples = (samples, settings.samples_per_pixel);
                             target_write.synced = false;
                         }
 
@@ -152,7 +156,7 @@ impl Renderer {
                             break;
                         }
 
-                        thread::sleep(Duration::from_millis(1000));
+                        thread::sleep(Duration::from_millis(1));
                     }
 
                     info!("finished rendering...");

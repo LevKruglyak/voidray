@@ -26,6 +26,7 @@ use winit::dpi::LogicalSize;
 mod render;
 mod core;
 mod pipeline;
+mod utils;
 
 struct VoidrayEngine {
     pipeline: ViewportPipeline,
@@ -46,7 +47,7 @@ impl Engine<EguiImplementation> for VoidrayEngine {
         )])
         .expect("failed to initialize logging");
 
-        let dimensions = [100, 100];
+        let dimensions = [50, 50];
 
         let scene = Arc::new(RwLock::new(Scene::default()));
         let target = Arc::new(RwLock::new(RenderTarget::new(&api.context, dimensions)));
@@ -76,6 +77,10 @@ impl Engine<EguiImplementation> for VoidrayEngine {
     }
 
     fn immediate(&mut self, context: &mut egui::Context, api: &mut EngineApi) {
+        egui::TopBottomPanel::top("top_panel").show(context, |ui| {
+            ui.label("top panel");
+        });
+
         egui::SidePanel::left("left_panel")
             .min_width(200.0)
             .show(context, |ui| {
@@ -112,8 +117,15 @@ impl Engine<EguiImplementation> for VoidrayEngine {
 
                 let samples = self.renderer.sample_count();
                 if currently_rendering {
-                    ui.label(format!("Samples: {}/{}", samples.0 - 1, samples.1));
+                    ui.label(format!("Samples: {}/{}", samples.0, samples.1));
                 }
+            });
+
+        egui::SidePanel::right("right_panel")
+            .min_width(200.0)
+            .max_width(200.0)
+            .show(context, |ui| {
+
             });
     }
 
@@ -131,7 +143,7 @@ fn main() {
     let options = EngineOptions {
         window_options: WindowOptions {
             title: "Voidray Engine",
-            dimensions: LogicalSize::new(1200, 1000),
+            dimensions: LogicalSize::new(1400, 1000),
         },
         ..EngineOptions::default()
     };
