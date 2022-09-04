@@ -1,6 +1,7 @@
-use std::f32::consts::PI;
+use std::{f32::consts::PI, ops::{Add, Mul}};
 
 use cgmath::InnerSpace;
+use rand::{thread_rng, Rng};
 
 use crate::core::{Vec3, Vec2};
 
@@ -38,4 +39,23 @@ pub fn degrees_to_radians(degrees: f32) -> f32 {
 #[inline]
 pub fn radians_to_degrees(radians: f32) -> f32 {
     radians * 180.0 / PI
+}
+
+pub fn lerp<T>(a: T, b: T, t: f32) -> T where T: Add<Output = T> + Mul<f32, Output = T> {
+    a * (1.0 - t) + b
+}
+
+pub fn random_vector(min: f32, max: f32) -> Vec3 {
+    let rng = &mut thread_rng();
+    Vec3::new(rng.gen_range(min..=max), rng.gen_range(min..=max), rng.gen_range(min..=max))
+}
+
+pub fn sample_unit_sphere_surface() -> Vec3 {
+    random_vector(-1.0, 1.0).normalize()
+    // loop {
+    //     let vec = random_vector(-1.0, 1.0);
+    //     if vec.magnitude2() <= 1.0 {
+    //         return vec.normalize();
+    //     }
+    // }
 }

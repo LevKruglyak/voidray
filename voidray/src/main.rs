@@ -23,8 +23,10 @@ use vulkano::{
 };
 use winit::dpi::LogicalSize;
 
-mod render;
 mod core;
+mod common;
+
+mod render;
 mod pipeline;
 mod utils;
 
@@ -47,7 +49,7 @@ impl Engine<EguiImplementation> for VoidrayEngine {
         )])
         .expect("failed to initialize logging");
 
-        let dimensions = [50, 50];
+        let dimensions = [100, 100];
 
         let scene = Arc::new(RwLock::new(Scene::default()));
         let target = Arc::new(RwLock::new(RenderTarget::new(&api.context, dimensions)));

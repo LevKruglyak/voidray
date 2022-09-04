@@ -1,4 +1,5 @@
-use super::{ray::Ray, types::*};
+use crate::core::Vec3;
+use crate::core::ray::Ray;
 
 pub trait Bounded {
     fn bounds(&self) -> AABB;
@@ -77,9 +78,9 @@ impl AABB {
     }
 
     /// Returns true if the ray hits the bounding box
-    pub fn hit(&self, ray: &Ray, tmin: Float, tmax: Float) -> bool {
-        let mut tmin = tmin;
-        let mut tmax = tmax;
+    pub fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> bool {
+        let mut t_min = t_min;
+        let mut t_max = t_max;
 
         // x pass
         let inv_d = 1.0 / ray.direction.x;
@@ -88,13 +89,13 @@ impl AABB {
         if inv_d < 0.0 {
             std::mem::swap(&mut t0, &mut t1);
         }
-        if t0 > tmin {
-            tmin = t0;
+        if t0 > t_min {
+            t_min = t0;
         }
-        if t1 < tmax {
-            tmax = t1;
+        if t1 < t_max {
+            t_max = t1;
         }
-        if tmax <= tmin {
+        if t_max <= t_min {
             return false;
         }
 
@@ -105,13 +106,13 @@ impl AABB {
         if inv_d < 0.0 {
             std::mem::swap(&mut t0, &mut t1);
         }
-        if t0 > tmin {
-            tmin = t0;
+        if t0 > t_min {
+            t_min = t0;
         }
-        if t1 < tmax {
-            tmax = t1;
+        if t1 < t_max {
+            t_max = t1;
         }
-        if tmax <= tmin {
+        if t_max <= t_min {
             return false;
         }
 
@@ -122,13 +123,13 @@ impl AABB {
         if inv_d < 0.0 {
             std::mem::swap(&mut t0, &mut t1);
         }
-        if t0 > tmin {
-            tmin = t0;
+        if t0 > t_min {
+            t_min = t0;
         }
-        if t1 < tmax {
-            tmax = t1;
+        if t1 < t_max {
+            t_max = t1;
         }
-        if tmax <= tmin {
+        if t_max <= t_min {
             return false;
         }
 

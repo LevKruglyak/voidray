@@ -23,7 +23,7 @@ impl RayOrigin {
 }
 
 pub trait Camera: Send + Sync {
-    fn into_ray_origin(&self) -> RayOrigin;
+    fn to_ray_origin(&self) -> RayOrigin;
 }
 
 pub struct PerspectiveCamera {
@@ -35,7 +35,7 @@ pub struct PerspectiveCamera {
 }
 
 impl Camera for PerspectiveCamera {
-    fn into_ray_origin(&self) -> RayOrigin {
+    fn to_ray_origin(&self) -> RayOrigin {
         let theta = degrees_to_radians(self.fov);
         let h = f32::tan(theta / 2.0);
         let viewport_height = 2.0 * h;
@@ -61,7 +61,7 @@ impl Default for PerspectiveCamera {
     fn default() -> Self {
         Self {
             eye: Vec3::new(0.0, 0.0, 10.0),
-            direction: Vec3::new(0.0, 0.0, -1.0),
+            direction: Vec3::new(0.0, 0.0, 1.0),
             up: Vec3::new(0.0, 1.0, 0.0),
             fov: std::f32::consts::FRAC_PI_6,
             aspect_ratio: 1.0,
