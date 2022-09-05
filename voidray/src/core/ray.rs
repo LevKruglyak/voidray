@@ -1,7 +1,7 @@
 use cgmath::InnerSpace;
 use derive_new::new;
 
-use super::{Vec3, Float};
+use super::{Float, Vec3};
 
 #[derive(Debug, new, Clone, Copy)]
 pub struct Ray {

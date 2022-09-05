@@ -1,5 +1,5 @@
-use crate::core::{Vec3, Float};
 use crate::core::ray::Ray;
+use crate::core::{Float, Vec3};
 
 pub trait Bounded {
     fn bounds(&self) -> AABB;

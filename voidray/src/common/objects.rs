@@ -1,6 +1,17 @@
 use cgmath::InnerSpace;
 
-use crate::{core::{Vec3, ray::{Hittable, Ray, HitRecord}, material::Material, object::Object, Float}, utils::{aabb::{Bounded, AABB}, color::Color}};
+use crate::{
+    core::{
+        material::Material,
+        object::Object,
+        ray::{HitRecord, Hittable, Ray},
+        Float, Vec3,
+    },
+    utils::{
+        aabb::{Bounded, AABB},
+        color::Color,
+    },
+};
 
 pub struct Sphere {
     pub center: Vec3,

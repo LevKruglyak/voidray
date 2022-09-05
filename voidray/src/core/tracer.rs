@@ -2,7 +2,7 @@ use cgmath::{ElementWise, InnerSpace};
 
 use crate::utils::color::Color;
 // use log::*;
-use super::{scene::SceneAcceleration, ray::Ray, Vec3, Float};
+use super::{ray::Ray, scene::SceneAcceleration, Float, Vec3};
 
 #[derive(Debug, Clone)]
 pub enum RenderMode {
@@ -29,13 +29,22 @@ impl Default for RenderSettings {
     }
 }
 
-pub fn trace_ray(scene: &SceneAcceleration, settings: &RenderSettings, u: Float, v: Float) -> Color {
+pub fn trace_ray(
+    scene: &SceneAcceleration,
+    settings: &RenderSettings,
+    u: Float,
+    v: Float,
+) -> Color {
     let ray = scene.ray_origin.cast_ray(u, v);
     trace_ray_internal(scene, settings, &ray, 0)
 }
 
-
-fn trace_ray_internal(scene: &SceneAcceleration, settings: &RenderSettings, ray: &Ray, depth: u8) -> Color {
+fn trace_ray_internal(
+    scene: &SceneAcceleration,
+    settings: &RenderSettings,
+    ray: &Ray,
+    depth: u8,
+) -> Color {
     // Base condition
     if depth >= settings.max_ray_depth {
         return Color::new(0.0, 0.0, 0.0);
@@ -50,15 +59,23 @@ fn trace_ray_internal(scene: &SceneAcceleration, settings: &RenderSettings, ray:
             result = Some((hit, object));
         }
     }
-    
+
     if let Some((hit, object)) = result {
         let (attenuation, scattered) = match settings.render_mode {
             RenderMode::Full => object.scatter(ray, &hit),
-            RenderMode::Normal => (0.5 * (hit.normal.normalize() + Vec3::new(1.0, 1.0, 1.0)), None),
+            RenderMode::Normal => (
+                0.5 * (hit.normal.normalize() + Vec3::new(1.0, 1.0, 1.0)),
+                None,
+            ),
         };
 
         if let Some(scattered) = scattered {
-            return attenuation.mul_element_wise(trace_ray_internal(scene, settings, &scattered, depth + 1));
+            return attenuation.mul_element_wise(trace_ray_internal(
+                scene,
+                settings,
+                &scattered,
+                depth + 1,
+            ));
         } else {
             return attenuation;
         };

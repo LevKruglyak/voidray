@@ -3,7 +3,7 @@ use std::ops::{Add, Mul};
 use cgmath::InnerSpace;
 use rand::{thread_rng, Rng};
 
-use crate::core::{Vec3, Vec2, Float, PI};
+use crate::core::{Float, Vec2, Vec3, PI};
 
 /// Returns true if a vector is smaller than 1.0e-8 in each coordinate
 pub fn near_zero(vector: Vec3) -> bool {
@@ -41,13 +41,20 @@ pub fn radians_to_degrees(radians: Float) -> Float {
     radians * 180.0 / PI
 }
 
-pub fn lerp<T>(a: T, b: T, t: Float) -> T where T: Add<Output = T> + Mul<Float, Output = T> {
+pub fn lerp<T>(a: T, b: T, t: Float) -> T
+where
+    T: Add<Output = T> + Mul<Float, Output = T>,
+{
     a * (1.0 - t) + b
 }
 
 pub fn random_vector(min: Float, max: Float) -> Vec3 {
     let rng = &mut thread_rng();
-    Vec3::new(rng.gen_range(min..=max), rng.gen_range(min..=max), rng.gen_range(min..=max))
+    Vec3::new(
+        rng.gen_range(min..=max),
+        rng.gen_range(min..=max),
+        rng.gen_range(min..=max),
+    )
 }
 
 pub fn sample_unit_sphere_surface() -> Vec3 {

@@ -2,7 +2,7 @@ use cgmath::InnerSpace;
 
 use crate::utils::{color::Color, math::to_spherical_coords};
 
-use super::{ray::Ray, PI, Float};
+use super::{ray::Ray, Float, PI};
 use log::*;
 
 pub trait Environment: Send + Sync {

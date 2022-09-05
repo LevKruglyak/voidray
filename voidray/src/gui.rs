@@ -1,6 +1,6 @@
 use egui::{InnerResponse, Ui};
 
-use crate::core::{Vec3, camera::Camera};
+use crate::core::{camera::Camera, Vec3};
 
 pub trait Editable {
     fn display_ui(&mut self, ui: &mut Ui, modified: &mut bool) -> InnerResponse<()>;

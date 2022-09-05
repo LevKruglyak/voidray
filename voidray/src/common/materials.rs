@@ -2,7 +2,17 @@ use cgmath::InnerSpace;
 use derive_new::new;
 use rand::{thread_rng, Rng};
 
-use crate::{utils::{color::Color, math::{refract, reflect, sample_unit_sphere_surface, near_zero}}, core::{material::Material, ray::{Ray, HitRecord}, Float}};
+use crate::{
+    core::{
+        material::Material,
+        ray::{HitRecord, Ray},
+        Float,
+    },
+    utils::{
+        color::Color,
+        math::{near_zero, reflect, refract, sample_unit_sphere_surface},
+    },
+};
 
 pub struct Lambertian {
     albedo: Color,

@@ -1,12 +1,12 @@
-use cgmath::{Vector3, Vector2};
+use cgmath::{Vector2, Vector3};
 
+pub mod camera;
+pub mod environment;
+pub mod material;
+pub mod object;
 pub mod ray;
 pub mod scene;
 pub mod tracer;
-pub mod camera;
-pub mod material;
-pub mod object;
-pub mod environment;
 
 #[cfg(feature = "high_precision")]
 pub type Float = f64;

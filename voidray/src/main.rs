@@ -1,14 +1,14 @@
 #![allow(unused_variables, dead_code)]
 
+use crate::core::tracer::RenderSettings;
 use crate::render::RenderAction;
 use crate::render::RenderTargetView;
 use crate::render::Renderer;
-use crate::core::tracer::RenderSettings;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-use crate::render::RenderTarget;
 use crate::core::scene::Scene;
+use crate::render::RenderTarget;
 
 use gui::Editable;
 use hatchery::{
@@ -16,20 +16,20 @@ use hatchery::{
     gui::egui_implementation::EguiImplementation,
 };
 pub use log::*;
-use simplelog::*;
 use pipeline::ViewportPipeline;
+use simplelog::*;
 use vulkano::{
     command_buffer::{AutoCommandBufferBuilder, SecondaryAutoCommandBuffer},
     pipeline::graphics::viewport::Viewport,
 };
 use winit::dpi::LogicalSize;
 
-mod core;
 mod common;
+mod core;
 
 mod gui;
-mod render;
 mod pipeline;
+mod render;
 mod utils;
 
 struct VoidrayEngine {
@@ -79,7 +79,6 @@ impl Engine<EguiImplementation> for VoidrayEngine {
             api.context.device_name()
         );
 
-
         #[cfg(feature = "high_precision")]
         info!("Compiled with high_precision");
 
@@ -109,7 +108,10 @@ impl Engine<EguiImplementation> for VoidrayEngine {
                     let samples_per_pixel = settings.samples_per_pixel;
                     ui.horizontal(|ui| {
                         ui.label("Samples per run:");
-                        ui.add(egui::Slider::new(&mut settings.samples_per_run, 1..=samples_per_pixel));
+                        ui.add(egui::Slider::new(
+                            &mut settings.samples_per_run,
+                            1..=samples_per_pixel,
+                        ));
                     });
                     ui.horizontal(|ui| {
                         ui.label("Max ray depth:");
@@ -144,9 +146,7 @@ impl Engine<EguiImplementation> for VoidrayEngine {
         egui::SidePanel::right("right_panel")
             .min_width(200.0)
             .max_width(200.0)
-            .show(context, |ui| {
-
-            });
+            .show(context, |ui| {});
     }
 
     fn render(

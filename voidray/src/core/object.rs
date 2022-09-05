@@ -1,5 +1,5 @@
 use crate::utils::aabb::Bounded;
 
-use super::{ray::Hittable, material::Material};
+use super::{material::Material, ray::Hittable};
 
 pub trait Object: Sync + Hittable + Bounded + Material {}

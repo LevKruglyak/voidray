@@ -3,7 +3,7 @@ use derive_new::new;
 
 use crate::utils::math::degrees_to_radians;
 
-use super::{ray::Ray, Vec3, Float};
+use super::{ray::Ray, Float, Vec3};
 
 #[derive(Debug, new)]
 pub struct RayOrigin {

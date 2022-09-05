@@ -1,6 +1,14 @@
-use crate::common::{objects::Sphere, materials::{Lambertian, Dielectric}};
+use crate::common::{
+    materials::{Dielectric, Lambertian},
+    objects::Sphere,
+};
 
-use super::{camera::{Camera, RayOrigin}, object::Object, Vec3, environment::{Environment, HDRIEnvironment}};
+use super::{
+    camera::{Camera, RayOrigin},
+    environment::{Environment, HDRIEnvironment},
+    object::Object,
+    Vec3,
+};
 
 pub struct Scene {
     pub camera: Camera,
@@ -15,7 +23,7 @@ impl Default for Scene {
         let mut scene = Self {
             camera: Camera::default(),
             objects: Vec::new(),
-            environment: Box::new(HDRIEnvironment::new("voidray/assets/studio.exr"))
+            environment: Box::new(HDRIEnvironment::new("voidray/assets/studio.exr")),
         };
 
         scene.objects.push(Box::new(Sphere {
@@ -29,7 +37,7 @@ impl Default for Scene {
         //     radius: -2.9,
         //     material: Box::new(Dielectric::new(1.33)),
         // }));
-        
+
         scene.objects.push(Box::new(Sphere {
             center: Vec3::new(0.0, 2.0, 0.0),
             radius: -2.99,
