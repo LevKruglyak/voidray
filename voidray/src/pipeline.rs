@@ -1,3 +1,4 @@
+use crate::core::tracer::RenderSettings;
 use crate::render::{RenderTarget, RenderTargetView};
 use bytemuck::{Pod, Zeroable};
 use std::sync::{Arc, RwLock};
@@ -57,10 +58,75 @@ layout(set = 0, binding = 0) uniform sampler2D tex;
 
 layout(push_constant) uniform PostProcessingData {
   float scale;
+  float gamma;
+  bool aces;
 } ppd;
 
+// float3 ACESFitted(float3 color)
+// {
+//     color = mul(ACESInputMat, color);
+//
+//     // Apply RRT and ODT
+//     color = RRTAndODTFit(color);
+//
+//     color = mul(ACESOutputMat, color);
+//
+//     // Clamp to [0, 1]
+//     color = saturate(color);
+//
+//     return color;
+// }
+
+const mat3 ACESInputMat = 
+{
+    {0.59719, 0.35458, 0.04823},
+    {0.07600, 0.90834, 0.01566},
+    {0.02840, 0.13383, 0.83777}
+};
+
+const mat3 ACESOutputMat = 
+{
+    { 1.60475, -0.53108, -0.07367},
+    {-0.10208,  1.10813, -0.00605},
+    {-0.00327, -0.07276,  1.07602}
+};
+
+vec3 RRTAndODTFit(vec3 v) {
+    vec3 a = v * (v + 0.0245786) - 0.000090537;
+    vec3 b = v * (0.983729 * v + 0.4329510) + 0.238081;
+    return a / b;
+}
+
+vec3 ACESFitted(vec3 color) {
+    color = ACESInputMat * color;
+
+    // Apply RRT and ODT
+    color = RRTAndODTFit(color);
+
+    color = ACESOutputMat * color;
+
+    return color;
+}
+
+vec3 ACESFilm(vec3 x) {
+    float a = 2.51f;
+    float b = 0.03f;
+    float c = 2.43f;
+    float d = 0.59f;
+    float e = 0.14f;
+    return ((x*(a*x+b))/(x*(c*x+d)+e));
+}
+
 void main() {
-    f_color = vec4(texture(tex, f_uv).xyz * ppd.scale, 1.0);
+    vec3 color = texture(tex, f_uv).xyz * ppd.scale;
+
+    if (ppd.aces) {
+        color = ACESFilm(color);
+    }
+
+    color = pow(color, vec3(1.0 / ppd.gamma));
+
+    f_color = vec4(color, 1.0);
 }"
     }
 }
@@ -152,13 +218,14 @@ impl ViewportPipeline {
             index_buffer,
             target,
             target_view,
-            post_processing_data: PostProcessingData { scale: 0.0 },
+            post_processing_data: PostProcessingData { scale: 0.0, aces: false as u32, gamma: 2.2 },
         }
     }
 
     pub fn draw(
         &mut self,
         builder: &mut AutoCommandBufferBuilder<SecondaryAutoCommandBuffer>,
+        settings: &RenderSettings,
         viewport: Viewport,
     ) {
         if let Ok(mut target) = self.target.try_write() {
@@ -167,6 +234,9 @@ impl ViewportPipeline {
                 self.post_processing_data.scale = target.scale();
             }
         }
+
+        self.post_processing_data.aces = settings.enable_aces as u32;
+        self.post_processing_data.gamma = settings.gamma;
 
         let descriptor_set = self.create_descriptor_set(self.target_view.view());
         builder

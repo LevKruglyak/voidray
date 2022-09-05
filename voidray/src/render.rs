@@ -85,8 +85,10 @@ impl Renderer {
                     info!("cleared target");
 
                     // Build acceleration structures
-                    let scene_write = scene.read().unwrap();
-                    let scene_accel = scene_write.to_acceleration();
+                    let scene_accel = { 
+                        let scene_write = scene.read().unwrap();
+                        scene_write.to_acceleration()
+                    };
 
                     info!("built acceleration structures");
 

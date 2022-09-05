@@ -1,22 +1,30 @@
+use std::sync::Arc;
+
 use cgmath::InnerSpace;
 
 use crate::{
     core::{
-        material::Material,
-        object::Object,
         ray::{HitRecord, Hittable, Ray},
-        Float, Vec3,
+        Float, Vec3, scene::{Scene, ShapeHandle}, INF,
     },
-    utils::{
-        aabb::{Bounded, AABB},
-        color::Color,
-    },
+    utils:: aabb::{Bounded, AABB},
 };
+
+pub struct Shapes {}
+
+impl Shapes {
+    pub fn sphere(scene: &mut Scene, center: Vec3, radius: Float) -> ShapeHandle {
+        scene.add_analytic(Arc::new(Sphere { center, radius, }))
+    }
+
+    pub fn ground_plane(scene: &mut Scene, height: Float) -> ShapeHandle {
+        scene.add_analytic(Arc::new(GroundPlane { height, }))
+    }
+}
 
 pub struct Sphere {
     pub center: Vec3,
     pub radius: Float,
-    pub material: Box<dyn Material>,
 }
 
 impl Bounded for Sphere {
@@ -55,14 +63,31 @@ impl Hittable for Sphere {
         let point = ray.at(root);
         let normal = (point - self.center) / self.radius;
 
-        Some(HitRecord::new(point, normal, root, ray))
+        Some(HitRecord::new(point, normal, root, ray)) 
     }
 }
 
-impl Material for Sphere {
-    fn scatter(&self, ray: &Ray, hit: &HitRecord) -> (Color, Option<Ray>) {
-        self.material.scatter(ray, hit)
+pub struct GroundPlane {
+    pub height: Float,
+}
+
+impl Hittable for GroundPlane {
+    fn hit(&self, ray: &Ray, t_min: Float, t_max: Float) -> Option<HitRecord> {
+        let t = (self.height - ray.origin.y) / ray.direction.y;
+
+        if t <= t_min {
+            return None;
+        }
+        
+        Some(HitRecord::new(ray.at(t), Vec3::new(0.0, 1.0, 0.0), t, ray))
     }
 }
 
-impl Object for Sphere {}
+impl Bounded for GroundPlane {
+    fn bounds(&self) -> AABB {
+        AABB {
+            min: Vec3::new(-INF, self.height - 0.0001, -INF),
+            max: Vec3::new(INF, self.height + 0.0001, INF),
+        }
+    }
+}

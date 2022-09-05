@@ -4,12 +4,14 @@ use crate::core::tracer::RenderSettings;
 use crate::render::RenderAction;
 use crate::render::RenderTargetView;
 use crate::render::Renderer;
+use crate::core::tracer::RenderMode;
 use std::sync::Arc;
 use std::sync::RwLock;
 
 use crate::core::scene::Scene;
 use crate::render::RenderTarget;
 
+use egui::ComboBox;
 use gui::Editable;
 use hatchery::{
     engine::{Engine, EngineApi, EngineOptions, Hatchery, WindowOptions},
@@ -99,6 +101,7 @@ impl Engine<EguiImplementation> for VoidrayEngine {
 
                 let currently_rendering = self.renderer.currently_rendering();
                 let mut settings = self.settings.write().unwrap();
+                let mut modified = false;
 
                 ui.add_enabled_ui(!currently_rendering, |ui| {
                     ui.horizontal(|ui| {
@@ -117,6 +120,43 @@ impl Engine<EguiImplementation> for VoidrayEngine {
                         ui.label("Max ray depth:");
                         ui.add(egui::Slider::new(&mut settings.max_ray_depth, 1..=100));
                     });
+                });
+
+                ui.horizontal(|ui| {
+                    ui.label("Render mode:");
+                    ComboBox::from_label("")
+                        .selected_text(format!("{:?}", settings.render_mode))
+                        .show_ui(ui, |ui| {
+                            if ui
+                                .selectable_value(
+                                    &mut settings.render_mode,
+                                    RenderMode::Full,
+                                    "Full",
+                                )
+                                .clicked()
+                            {
+                                modified = true
+                            };
+                            if ui
+                                .selectable_value(
+                                    &mut settings.render_mode,
+                                    RenderMode::Normal,
+                                    "Normal",
+                                )
+                                .clicked()
+                            {
+                                modified = true
+                            };
+                        });
+                });
+
+                ui.checkbox(&mut settings.enable_aces, "Enable ACES");
+                ui.horizontal(|ui| {
+                    ui.label("Gamma:");
+                    ui.add(egui::Slider::new(
+                        &mut settings.gamma,
+                        0.0..=5.0,
+                    ));
                 });
 
                 if let Ok(mut scene_write) = self.scene.try_write() {
@@ -155,7 +195,7 @@ impl Engine<EguiImplementation> for VoidrayEngine {
         viewport: Viewport,
     ) {
         let samples = self.renderer.sample_count();
-        self.pipeline.draw(builder, viewport);
+        self.pipeline.draw(builder, &self.settings.read().unwrap(), viewport);
     }
 }
 

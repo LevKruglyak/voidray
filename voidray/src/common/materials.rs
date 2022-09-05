@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use cgmath::InnerSpace;
 use derive_new::new;
 use rand::{thread_rng, Rng};
@@ -6,13 +8,39 @@ use crate::{
     core::{
         material::Material,
         ray::{HitRecord, Ray},
-        Float,
+        Float, scene::{MaterialHandle, Scene},
     },
     utils::{
         color::Color,
         math::{near_zero, reflect, refract, sample_unit_sphere_surface},
     },
 };
+
+pub struct Materials {
+
+}
+
+impl Materials {
+    pub fn lambertian(scene: &mut Scene, color: Color) -> MaterialHandle {
+        scene.add_material(Arc::new(Lambertian::new(color)))
+    }
+
+    pub fn dielectric(scene: &mut Scene, ir: Float) -> MaterialHandle {
+        scene.add_material(Arc::new(Dielectric::new(ir)))
+    }
+
+    pub fn emissive(scene: &mut Scene, strength: Float) -> MaterialHandle {
+        scene.add_material(Arc::new(Emission::new(Color::new(1.0, 1.0, 1.0), strength)))
+    }
+
+    pub fn diffuse_glossy(scene: &mut Scene, color: Color, roughness: Float, reflectiveness: Float) -> MaterialHandle {
+        scene.add_material(Arc::new(MixMaterial::new(
+                    Box::new(Lambertian::new(color)),
+                    Box::new(Metal::new(Color::new(1.0, 1.0, 1.0), roughness)),
+                    reflectiveness
+                )))
+    }
+}
 
 pub struct Lambertian {
     albedo: Color,

@@ -1,5 +1,15 @@
-use crate::utils::aabb::Bounded;
+use std::sync::Arc;
 
-use super::{material::Material, ray::Hittable};
+use super::{ray::Hittable, scene::{MeshHandle, ShapeHandle, MaterialHandle}};
 
-pub trait Object: Sync + Hittable + Bounded + Material {}
+#[derive(Clone, Copy)]
+pub struct Object {
+    pub shape: ShapeHandle,
+    pub material: MaterialHandle,
+}
+
+#[derive(Clone)]
+pub enum Shape {
+    Analytic(Arc<dyn Hittable>),
+    // Mesh(MeshHandle),
+}
