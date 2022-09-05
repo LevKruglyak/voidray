@@ -60,7 +60,7 @@ layout(push_constant) uniform PostProcessingData {
 } ppd;
 
 void main() {
-    f_color = vec4(sqrt(texture(tex, f_uv).xyz * ppd.scale), 1.0);
+    f_color = vec4(texture(tex, f_uv).xyz * ppd.scale, 1.0);
 }"
     }
 }

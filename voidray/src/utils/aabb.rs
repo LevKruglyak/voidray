@@ -1,11 +1,11 @@
-use crate::core::Vec3;
+use crate::core::{Vec3, Float};
 use crate::core::ray::Ray;
 
 pub trait Bounded {
     fn bounds(&self) -> AABB;
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct AABB {
     /// Lower left corner of the AABB
     pub min: Vec3,
@@ -54,7 +54,7 @@ impl AABB {
     }
 
     /// Ensures that no coordinate dimension of the bounding box is below a given epsilon
-    pub fn epsilon_expand(bounds: Self, epsilon: f32) -> Self {
+    pub fn epsilon_expand(bounds: Self, epsilon: Float) -> Self {
         let dimensions = bounds.dimensions();
         let centroid = bounds.centroid();
         let mut result = bounds.clone();
@@ -78,7 +78,7 @@ impl AABB {
     }
 
     /// Returns true if the ray hits the bounding box
-    pub fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> bool {
+    pub fn hit(&self, ray: &Ray, t_min: Float, t_max: Float) -> bool {
         let mut t_min = t_min;
         let mut t_max = t_max;
 

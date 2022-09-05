@@ -24,6 +24,7 @@ use vulkano_util::context::VulkanoContext;
 use log::*;
 use rayon::prelude::*;
 
+use crate::core::Float;
 use crate::core::scene::Scene;
 use crate::core::tracer::{RenderSettings, trace_ray};
 use crate::utils::color::Color;
@@ -84,7 +85,7 @@ impl Renderer {
                     info!("cleared target");
 
                     // Build acceleration structures
-                    let scene_write = scene.write().unwrap();
+                    let scene_write = scene.read().unwrap();
                     let scene_accel = scene_write.to_acceleration();
 
                     info!("built acceleration structures");
@@ -103,18 +104,18 @@ impl Renderer {
                         for _ in 0..num_samples {
                             // UV coordinates
                             let u =
-                                (x as f32 + range.sample(&mut rng)) / (dimensions[0] - 1) as f32;
+                                (x as Float + range.sample(&mut rng)) / (dimensions[0] - 1) as Float;
                             let v =
-                                (y as f32 + range.sample(&mut rng)) / (dimensions[1] - 1) as f32;
+                                (y as Float + range.sample(&mut rng)) / (dimensions[1] - 1) as Float;
 
                             color += trace_ray(&scene_accel, settings_ref, u, v);
                         }
 
-                        color *= 1.0 / settings.samples_per_pixel as f32;
+                        color *= 1.0 / settings.samples_per_pixel as Float;
 
-                        pixel[0] += color.x;
-                        pixel[1] += color.y;
-                        pixel[2] += color.z;
+                        pixel[0] += color.x as f32;
+                        pixel[1] += color.y as f32;
+                        pixel[2] += color.z as f32;
                     };
 
                     let samples_per_run = settings.samples_per_run;

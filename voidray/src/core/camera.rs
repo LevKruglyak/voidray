@@ -3,7 +3,7 @@ use derive_new::new;
 
 use crate::utils::math::degrees_to_radians;
 
-use super::{ray::Ray, Vec3};
+use super::{ray::Ray, Vec3, Float};
 
 #[derive(Debug, new)]
 pub struct RayOrigin {
@@ -14,7 +14,7 @@ pub struct RayOrigin {
 }
 
 impl RayOrigin {
-    pub fn cast_ray(&self, s: f32, t: f32) -> Ray {
+    pub fn cast_ray(&self, s: Float, t: Float) -> Ray {
         Ray::new(
             self.origin,
             self.lower_left_corner + self.horizontal * s - self.vertical * t - self.origin,
@@ -22,22 +22,18 @@ impl RayOrigin {
     }
 }
 
-pub trait Camera: Send + Sync {
-    fn to_ray_origin(&self) -> RayOrigin;
-}
-
-pub struct PerspectiveCamera {
+pub struct Camera {
     pub eye: Vec3,
     pub direction: Vec3,
     pub up: Vec3,
-    pub fov: f32,
-    pub aspect_ratio: f32,
+    pub fov: Float,
+    pub aspect_ratio: Float,
 }
 
-impl Camera for PerspectiveCamera {
-    fn to_ray_origin(&self) -> RayOrigin {
+impl Camera {
+    pub fn to_ray_origin(&self) -> RayOrigin {
         let theta = degrees_to_radians(self.fov);
-        let h = f32::tan(theta / 2.0);
+        let h = Float::tan(theta / 2.0);
         let viewport_height = 2.0 * h;
         let viewport_width = self.aspect_ratio * viewport_height;
 
@@ -57,18 +53,14 @@ impl Camera for PerspectiveCamera {
     }
 }
 
-impl Default for PerspectiveCamera {
+impl Default for Camera {
     fn default() -> Self {
         Self {
-            eye: Vec3::new(0.0, 0.0, 10.0),
-            direction: Vec3::new(0.0, 0.0, 1.0),
+            eye: Vec3::new(0.0, 2.0, 10.0),
+            direction: Vec3::new(0.0, -0.1, 1.0),
             up: Vec3::new(0.0, 1.0, 0.0),
-            fov: std::f32::consts::FRAC_PI_6,
+            fov: 90.0,
             aspect_ratio: 1.0,
         }
     }
-}
-
-impl PerspectiveCamera {
-
 }

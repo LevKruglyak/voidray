@@ -1,7 +1,7 @@
 use cgmath::InnerSpace;
 use derive_new::new;
 
-use super::Vec3;
+use super::{Vec3, Float};
 
 #[derive(Debug, new, Clone, Copy)]
 pub struct Ray {
@@ -10,7 +10,7 @@ pub struct Ray {
 }
 
 impl Ray {
-    pub fn at(&self, t: f32) -> Vec3 {
+    pub fn at(&self, t: Float) -> Vec3 {
         self.origin + self.direction * t
     }
 }
@@ -19,12 +19,12 @@ impl Ray {
 pub struct HitRecord {
     pub point: Vec3,
     pub normal: Vec3,
-    pub t: f32,
+    pub t: Float,
     pub front_face: bool,
 }
 
 impl HitRecord {
-    pub fn new(point: Vec3, outward_normal: Vec3, t: f32, ray: &Ray) -> Self {
+    pub fn new(point: Vec3, outward_normal: Vec3, t: Float, ray: &Ray) -> Self {
         let front_face = ray.direction.dot(outward_normal) < 0.0;
         let normal = if front_face {
             outward_normal
@@ -42,5 +42,5 @@ impl HitRecord {
 }
 
 pub trait Hittable: Sync + Send {
-    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord>;
+    fn hit(&self, ray: &Ray, t_min: Float, t_max: Float) -> Option<HitRecord>;
 }

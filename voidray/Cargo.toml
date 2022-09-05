@@ -37,4 +37,11 @@ rayon = "1.5"
 # Math
 cgmath = "0.18.0"
 
+# IO
+exr = "1.4.2"
+
 hatchery = { path = "../hatchery", features = ["egui"] }
+
+[features]
+high_precision = []
+default = ["high_precision"]

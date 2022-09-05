@@ -1,13 +1,11 @@
 use cgmath::InnerSpace;
 
-use crate::{core::{Vec3, ray::{Hittable, Ray, HitRecord}, material::Material, object::Object}, utils::{aabb::{Bounded, AABB}, color::Color}};
-
-use super::materials::PrincipledBSDF;
+use crate::{core::{Vec3, ray::{Hittable, Ray, HitRecord}, material::Material, object::Object, Float}, utils::{aabb::{Bounded, AABB}, color::Color}};
 
 pub struct Sphere {
     pub center: Vec3,
-    pub radius: f32,
-    pub material: PrincipledBSDF,
+    pub radius: Float,
+    pub material: Box<dyn Material>,
 }
 
 impl Bounded for Sphere {
@@ -20,7 +18,7 @@ impl Bounded for Sphere {
 }
 
 impl Hittable for Sphere {
-    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
+    fn hit(&self, ray: &Ray, t_min: Float, t_max: Float) -> Option<HitRecord> {
         let oc = ray.origin - self.center;
 
         let a = ray.direction.magnitude2();
@@ -51,10 +49,6 @@ impl Hittable for Sphere {
 }
 
 impl Material for Sphere {
-    fn bsdf(&self, normal: Vec3, to_viewer: Vec3, to_ray: Vec3) -> Color {
-        self.material.bsdf(normal, to_viewer, to_ray)
-    }
-
     fn scatter(&self, ray: &Ray, hit: &HitRecord) -> (Color, Option<Ray>) {
         self.material.scatter(ray, hit)
     }

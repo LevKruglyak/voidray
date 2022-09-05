@@ -10,6 +10,7 @@ use std::sync::RwLock;
 use crate::render::RenderTarget;
 use crate::core::scene::Scene;
 
+use gui::Editable;
 use hatchery::{
     engine::{Engine, EngineApi, EngineOptions, Hatchery, WindowOptions},
     gui::egui_implementation::EguiImplementation,
@@ -26,6 +27,7 @@ use winit::dpi::LogicalSize;
 mod core;
 mod common;
 
+mod gui;
 mod render;
 mod pipeline;
 mod utils;
@@ -49,7 +51,7 @@ impl Engine<EguiImplementation> for VoidrayEngine {
         )])
         .expect("failed to initialize logging");
 
-        let dimensions = [100, 100];
+        let dimensions = [1000, 1000];
 
         let scene = Arc::new(RwLock::new(Scene::default()));
         let target = Arc::new(RwLock::new(RenderTarget::new(&api.context, dimensions)));
@@ -76,6 +78,13 @@ impl Engine<EguiImplementation> for VoidrayEngine {
             api.context.device_type(),
             api.context.device_name()
         );
+
+
+        #[cfg(feature = "high_precision")]
+        info!("Compiled with high_precision");
+
+        #[cfg(not(feature = "high_precision"))]
+        info!("Compiled with low_precision");
     }
 
     fn immediate(&mut self, context: &mut egui::Context, api: &mut EngineApi) {
@@ -102,7 +111,16 @@ impl Engine<EguiImplementation> for VoidrayEngine {
                         ui.label("Samples per run:");
                         ui.add(egui::Slider::new(&mut settings.samples_per_run, 1..=samples_per_pixel));
                     });
+                    ui.horizontal(|ui| {
+                        ui.label("Max ray depth:");
+                        ui.add(egui::Slider::new(&mut settings.max_ray_depth, 1..=100));
+                    });
                 });
+
+                if let Ok(mut scene_write) = self.scene.try_write() {
+                    ui.heading("Camera");
+                    scene_write.camera.display_ui(ui, &mut false);
+                }
 
                 ui.horizontal(|ui| {
                     ui.add_enabled_ui(!currently_rendering, |ui| {
