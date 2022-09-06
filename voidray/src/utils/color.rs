@@ -1,6 +1,43 @@
-use crate::core::Vec3;
+use crate::core::{Float, Vec3, Vec4};
 
 pub type Color = Vec3;
+pub type ColorAlpha = Vec4;
+
+pub struct Colors {}
+
+impl Colors {
+    pub fn red() -> Color {
+        Color::new(1.0, 0.0, 0.0)
+    }
+
+    pub fn green() -> Color {
+        Color::new(0.0, 1.0, 0.0)
+    }
+
+    pub fn blue() -> Color {
+        Color::new(0.0, 0.0, 1.0)
+    }
+
+    pub fn white() -> Color {
+        Color::new(1.0, 1.0, 1.0)
+    }
+
+    pub fn gray(value: Float) -> Color {
+        Color::new(value, value, value)
+    }
+
+    pub fn black() -> Color {
+        Color::new(0.0, 0.0, 0.0)
+    }
+}
+
+pub fn into_alpha(color: Color, alpha: Float) -> ColorAlpha {
+    ColorAlpha::new(color.x, color.y, color.z, alpha)
+}
+
+pub fn alpha_mul(a: ColorAlpha, b: ColorAlpha) -> ColorAlpha {
+    ColorAlpha::new(a.x * b.x, a.y * b.y, a.z * b.z, Float::max(a.w, b.w))
+}
 
 // #[derive(Clone, Copy, Debug)]
 // pub struct Color {

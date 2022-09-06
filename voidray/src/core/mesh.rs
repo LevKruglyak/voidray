@@ -1,17 +1,18 @@
-use crate::core::ray::{Hittable, HitRecord};
+use crate::core::ray::{HitRecord, Hittable};
 use crate::utils::{
     aabb::{Bounded, AABB},
     math::degrees_to_radians,
 };
 use cgmath::InnerSpace;
+use log::*;
 use obj::{load_obj, Obj};
 use std::fs::File;
 use std::io::BufReader;
-use log::*;
 
 use super::{
     bvh::{BoundsCollection, BvhNode},
-    Vec3, ray::Ray, Float,
+    ray::Ray,
+    Float, Vec3,
 };
 
 #[derive(Debug)]
@@ -42,18 +43,23 @@ impl Mesh {
 
         for vertex in obj.vertices {
             vertices.push(Vertex {
-                position: Vec3::new(vertex.position[0] as Float, vertex.position[1] as Float, vertex.position[2] as Float),
-                normal: Vec3::new(vertex.normal[0] as Float, vertex.normal[1] as Float, vertex.normal[2] as Float),
+                position: Vec3::new(
+                    vertex.position[0] as Float,
+                    vertex.position[1] as Float,
+                    vertex.position[2] as Float,
+                ),
+                normal: Vec3::new(
+                    vertex.normal[0] as Float,
+                    vertex.normal[1] as Float,
+                    vertex.normal[2] as Float,
+                ),
             });
         }
 
         Self::from_buffers(vertices, obj.indices)
     }
 
-    pub fn from_buffers(
-        vertices: Vec<Vertex>,
-        indices: Vec<u32>,
-    ) -> Self {
+    pub fn from_buffers(vertices: Vec<Vertex>, indices: Vec<u32>) -> Self {
         let mut triangles = Vec::<Triangle>::new();
 
         for triangle in indices.chunks_exact(3) {
@@ -119,13 +125,7 @@ impl Hittable for Mesh {
 }
 
 impl Triangle {
-    fn hit(
-        &self,
-        ray: &Ray,
-        tmin: Float,
-        _: Float,
-        mesh: &Mesh,
-    ) -> Option<HitRecord> {
+    fn hit(&self, ray: &Ray, tmin: Float, _: Float, mesh: &Mesh) -> Option<HitRecord> {
         let v0 = &mesh.vertices[self.vertices[0] as usize];
         let v1 = &mesh.vertices[self.vertices[1] as usize];
         let v2 = &mesh.vertices[self.vertices[2] as usize];
@@ -194,13 +194,7 @@ impl BoundsCollection for Mesh {
             .collect()
     }
 
-    fn hit(
-        &self,
-        handle: usize,
-        ray: &Ray,
-        tmin: Float,
-        tmax: Float,
-    ) -> Option<HitRecord> {
+    fn hit(&self, handle: usize, ray: &Ray, tmin: Float, tmax: Float) -> Option<HitRecord> {
         self.triangles[handle as usize].hit(ray, tmin, tmax, self)
     }
 }

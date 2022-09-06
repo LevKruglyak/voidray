@@ -1,12 +1,19 @@
 use std::sync::Arc;
 
-use crate::{utils::color::Color, common::{materials::Materials, objects::Shapes}};
+use crate::{
+    common::{materials::Materials, objects::Shapes},
+    utils::color::{Color, Colors},
+};
 
 use super::{
+    bvh::BvhTree,
     camera::{Camera, RayOrigin},
     environment::{Environment, HDRIEnvironment, UniformEnvironment},
+    material::Material,
+    mesh::Mesh,
     object::{Object, Shape},
-    Vec3, material::Material, ray::Hittable, bvh::BvhTree, mesh::Mesh,
+    ray::Hittable,
+    Vec3,
 };
 
 pub struct Scene {
@@ -41,7 +48,7 @@ impl Scene {
     }
 
     pub fn add_object(&mut self, material: MaterialHandle, shape: ShapeHandle) -> ObjectHandle {
-        self.objects.push(Object { material, shape, });
+        self.objects.push(Object { material, shape });
         self.objects.len() - 1
     }
 
@@ -71,16 +78,49 @@ impl Default for Scene {
 
         let ball1_mat = Materials::dielectric(&mut scene, 1.33);
         let stand_mat = Materials::lambertian(&mut scene, Color::new(0.053, 0.053, 0.053));
-        let ground_mat = Materials::lambertian(&mut scene, Color::new(0.01, 0.01, 0.01));
+        let ground_mat = Materials::lambertian(&mut scene, Color::new(0.1, 0.01, 0.01));
 
-        let material_main = scene.add_mesh(Arc::new(Mesh::from_file("voidray/assets/material_testing_main.obj")));
-        let material_stand = scene.add_mesh(Arc::new(Mesh::from_file("voidray/assets/material_testing_stand.obj")));
+        let red = Materials::colored_emissive(&mut scene, Colors::red(), 100.0);
+        let blue = Materials::colored_emissive(&mut scene, Colors::green(), 100.0);
+        let green = Materials::colored_emissive(&mut scene, Colors::blue(), 100.0);
+
+        let red_shape = Shapes::sphere(&mut scene, Vec3::new(2.0, 3.0, 0.0), 0.5);
+        let blue_shape = Shapes::sphere(&mut scene, Vec3::new(0.0, 3.0, 0.0), 0.5);
+        let green_shape = Shapes::sphere(&mut scene, Vec3::new(-2.0, 3.0, 0.0), 0.5);
+
+        let material_main = scene.add_mesh(Arc::new(Mesh::from_file(
+            "voidray/assets/material_testing_main.obj",
+        )));
+        let material_stand = scene.add_mesh(Arc::new(Mesh::from_file(
+            "voidray/assets/material_testing_stand.obj",
+        )));
         let ground_shape = Shapes::ground_plane(&mut scene, 0.0);
         // let cube_shape = scene.add_mesh(Arc::new(Mesh::from_file("voidray/assets/fancy_monkey.obj")));
 
-        // scene.add_object(ground_mat, ground_shape);
-        scene.add_object(material_main, material_main);
+        scene.add_object(ground_mat, ground_shape);
+        // scene.add_object(red, red_shape);
+        // scene.add_object(blue, blue_shape);
+        // scene.add_object(green, green_shape);
+        // scene.add_object(ball1_mat, cube_shape);
+        scene.add_object(ball1_mat, material_main);
         scene.add_object(stand_mat, material_stand);
+
+        // let ground_mat = Materials::diffuse_glossy(&mut scene, Color::new(0.01, 0.01, 0.01), 0.1, 0.1);
+        //
+        // let red = Materials::colored_emissive(&mut scene, Colors::red(), 100.0);
+        // let blue = Materials::colored_emissive(&mut scene, Colors::green(), 100.0);
+        // let green = Materials::colored_emissive(&mut scene, Colors::blue(), 100.0);
+        //
+        // let red_shape = Shapes::sphere(&mut scene, Vec3::new(1.2, 0.5, 0.0), 0.5);
+        // let blue_shape = Shapes::sphere(&mut scene, Vec3::new(0.0, 0.5, 0.0), 0.5);
+        // let green_shape = Shapes::sphere(&mut scene, Vec3::new(-1.2, 0.5, 0.0), 0.5);
+        //
+        // let ground_shape = Shapes::ground_plane(&mut scene, 0.0);
+        //
+        // scene.add_object(ground_mat, ground_shape);
+        // scene.add_object(red, red_shape);
+        // scene.add_object(blue, blue_shape);
+        // scene.add_object(green, green_shape);
 
         scene
     }

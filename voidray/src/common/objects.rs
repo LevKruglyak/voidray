@@ -5,20 +5,21 @@ use cgmath::InnerSpace;
 use crate::{
     core::{
         ray::{HitRecord, Hittable, Ray},
-        Float, Vec3, scene::{Scene, ShapeHandle}, INF,
+        scene::{Scene, ShapeHandle},
+        Float, Vec3, INF,
     },
-    utils:: aabb::{Bounded, AABB},
+    utils::aabb::{Bounded, AABB},
 };
 
 pub struct Shapes {}
 
 impl Shapes {
     pub fn sphere(scene: &mut Scene, center: Vec3, radius: Float) -> ShapeHandle {
-        scene.add_analytic(Arc::new(Sphere { center, radius, }))
+        scene.add_analytic(Arc::new(Sphere { center, radius }))
     }
 
     pub fn ground_plane(scene: &mut Scene, height: Float) -> ShapeHandle {
-        scene.add_analytic(Arc::new(GroundPlane { height, }))
+        scene.add_analytic(Arc::new(GroundPlane { height }))
     }
 }
 
@@ -63,7 +64,7 @@ impl Hittable for Sphere {
         let point = ray.at(root);
         let normal = (point - self.center) / self.radius;
 
-        Some(HitRecord::new(point, normal, root, ray)) 
+        Some(HitRecord::new(point, normal, root, ray))
     }
 }
 
@@ -78,7 +79,7 @@ impl Hittable for GroundPlane {
         if t <= t_min {
             return None;
         }
-        
+
         Some(HitRecord::new(ray.at(t), Vec3::new(0.0, 1.0, 0.0), t, ray))
     }
 }

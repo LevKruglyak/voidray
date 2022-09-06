@@ -27,7 +27,7 @@ use rayon::prelude::*;
 use crate::core::scene::Scene;
 use crate::core::tracer::{trace_ray, RenderSettings};
 use crate::core::Float;
-use crate::utils::color::Color;
+use crate::utils::color::{Color, ColorAlpha};
 
 pub enum RenderAction {
     Start,
@@ -85,7 +85,7 @@ impl Renderer {
                     info!("cleared target");
 
                     // Build acceleration structures
-                    let scene_accel = { 
+                    let scene_accel = {
                         let scene_write = scene.read().unwrap();
                         scene_write.to_acceleration()
                     };
@@ -100,7 +100,7 @@ impl Renderer {
                         // Set up rng
                         let mut rng = thread_rng();
                         let range = Uniform::from(0.0..=1.0);
-                        let mut color = Color::new(0.0, 0.0, 0.0);
+                        let mut color = ColorAlpha::new(0.0, 0.0, 0.0, 0.0);
 
                         for _ in 0..num_samples {
                             // UV coordinates
@@ -117,6 +117,7 @@ impl Renderer {
                         pixel[0] += color.x as f32;
                         pixel[1] += color.y as f32;
                         pixel[2] += color.z as f32;
+                        pixel[3] += color.w as f32;
                     };
 
                     let samples_per_run = settings.samples_per_run;

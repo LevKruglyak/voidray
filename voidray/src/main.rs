@@ -1,10 +1,10 @@
 #![allow(unused_variables, dead_code)]
 
+use crate::core::tracer::RenderMode;
 use crate::core::tracer::RenderSettings;
 use crate::render::RenderAction;
 use crate::render::RenderTargetView;
 use crate::render::Renderer;
-use crate::core::tracer::RenderMode;
 use std::sync::Arc;
 use std::sync::RwLock;
 
@@ -18,6 +18,7 @@ use hatchery::{
     gui::egui_implementation::EguiImplementation,
 };
 pub use log::*;
+use pipeline::Tonemap;
 use pipeline::ViewportPipeline;
 use simplelog::*;
 use vulkano::{
@@ -124,7 +125,7 @@ impl Engine<EguiImplementation> for VoidrayEngine {
 
                 ui.horizontal(|ui| {
                     ui.label("Render mode:");
-                    ComboBox::from_label("")
+                    ComboBox::from_id_source("render_mode")
                         .selected_text(format!("{:?}", settings.render_mode))
                         .show_ui(ui, |ui| {
                             if ui
@@ -150,13 +151,30 @@ impl Engine<EguiImplementation> for VoidrayEngine {
                         });
                 });
 
-                ui.checkbox(&mut settings.enable_aces, "Enable ACES");
+                ui.horizontal(|ui| {
+                    ui.label("Tonemap:");
+                    ComboBox::from_id_source("tonemap")
+                        .selected_text(format!("{:?}", settings.tonemap))
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(&mut settings.tonemap, Tonemap::None, format!("{:?}", Tonemap::None));
+                            ui.selectable_value(&mut settings.tonemap, Tonemap::SimpleACES, format!("{:?}", Tonemap::SimpleACES));
+                            ui.selectable_value(&mut settings.tonemap, Tonemap::SimpleReinhard, format!("{:?}", Tonemap::SimpleReinhard));
+                            ui.selectable_value(&mut settings.tonemap, Tonemap::LumaReinhard, format!("{:?}", Tonemap::LumaReinhard));
+                            ui.selectable_value(&mut settings.tonemap, Tonemap::LumaWhitePreservingReinhard, format!("{:?}", Tonemap::LumaWhitePreservingReinhard));
+                            ui.selectable_value(&mut settings.tonemap, Tonemap::RomBinDaHouse, format!("{:?}", Tonemap::RomBinDaHouse));
+                            ui.selectable_value(&mut settings.tonemap, Tonemap::Filmic, format!("{:?}", Tonemap::Filmic));
+                            ui.selectable_value(&mut settings.tonemap, Tonemap::Uncharted2, format!("{:?}", Tonemap::Uncharted2));
+                        });
+                });
+
+                ui.checkbox(&mut settings.transparent, "Transparent");
                 ui.horizontal(|ui| {
                     ui.label("Gamma:");
-                    ui.add(egui::Slider::new(
-                        &mut settings.gamma,
-                        0.0..=5.0,
-                    ));
+                    ui.add(egui::Slider::new(&mut settings.gamma, 0.0..=5.0));
+                });
+                ui.horizontal(|ui| {
+                    ui.label("Exposure:");
+                    ui.add(egui::Slider::new(&mut settings.exposure, 0.0..=32.0));
                 });
 
                 if let Ok(mut scene_write) = self.scene.try_write() {
@@ -195,7 +213,8 @@ impl Engine<EguiImplementation> for VoidrayEngine {
         viewport: Viewport,
     ) {
         let samples = self.renderer.sample_count();
-        self.pipeline.draw(builder, &self.settings.read().unwrap(), viewport);
+        self.pipeline
+            .draw(builder, &self.settings.read().unwrap(), viewport);
     }
 }
 

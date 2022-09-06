@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use super::{ray::Hittable, scene::{MeshHandle, ShapeHandle, MaterialHandle}};
+use super::{
+    ray::Hittable,
+    scene::{MaterialHandle, MeshHandle, ShapeHandle},
+};
 
 #[derive(Clone, Copy)]
 pub struct Object {

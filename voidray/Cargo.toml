@@ -45,4 +45,4 @@ hatchery = { path = "../hatchery", features = ["egui"] }
 
 [features]
 high_precision = []
-default = ["high_precision"]
+# default = ["high_precision"]

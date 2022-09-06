@@ -1,8 +1,16 @@
 use cgmath::{ElementWise, InnerSpace};
 
-use crate::utils::color::Color;
+use crate::{
+    pipeline::Tonemap,
+    utils::color::{alpha_mul, into_alpha, ColorAlpha},
+};
 // use log::*;
-use super::{ray::{Ray, Hittable}, scene::SceneAcceleration, Float, Vec3, object::Shape};
+use super::{
+    object::Shape,
+    ray::{Hittable, Ray},
+    scene::SceneAcceleration,
+    Float, Vec3,
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum RenderMode {
@@ -15,8 +23,10 @@ pub struct RenderSettings {
     pub samples_per_pixel: u32,
     pub samples_per_run: u32,
     pub max_ray_depth: u8,
-    pub enable_aces: bool,
+    pub tonemap: Tonemap,
     pub gamma: f32,
+    pub exposure: f32,
+    pub transparent: bool,
     pub render_mode: RenderMode,
 }
 
@@ -24,11 +34,13 @@ impl Default for RenderSettings {
     fn default() -> Self {
         Self {
             samples_per_pixel: 100,
-            samples_per_run: 10,
+            samples_per_run: 1,
             max_ray_depth: 10,
             render_mode: RenderMode::Full,
-            enable_aces: false,
+            tonemap: Tonemap::None,
+            transparent: false,
             gamma: 2.2,
+            exposure: 1.0,
         }
     }
 }
@@ -38,7 +50,7 @@ pub fn trace_ray(
     settings: &RenderSettings,
     u: Float,
     v: Float,
-) -> Color {
+) -> ColorAlpha {
     let ray = scene.ray_origin.cast_ray(u, v);
     trace_ray_internal(scene, settings, &ray, 0)
 }
@@ -48,10 +60,10 @@ fn trace_ray_internal(
     settings: &RenderSettings,
     ray: &Ray,
     depth: u8,
-) -> Color {
+) -> ColorAlpha {
     // Base condition
     if depth >= settings.max_ray_depth {
-        return Color::new(0.0, 0.0, 0.0);
+        return ColorAlpha::new(0.0, 0.0, 0.0, 1.0);
     }
 
     let mut result = None;
@@ -70,25 +82,26 @@ fn trace_ray_internal(
 
     if let Some((hit, object)) = result {
         let material = scene.material_ref(object.material);
-        let (attenuation, scattered) = match settings.render_mode {
+        let (attenuation, refracted, scattered) = match settings.render_mode {
             RenderMode::Full => material.scatter(ray, &hit),
             RenderMode::Normal => (
                 0.5 * (hit.normal.normalize() + Vec3::new(1.0, 1.0, 1.0)),
+                false,
                 None,
             ),
         };
 
+        let alpha = if refracted { 0.0 } else { 1.0 };
+
         if let Some(scattered) = scattered {
-            return attenuation.mul_element_wise(trace_ray_internal(
-                scene,
-                settings,
-                &scattered,
-                depth + 1,
-            ));
+            return alpha_mul(
+                into_alpha(attenuation, alpha),
+                trace_ray_internal(scene, settings, &scattered, depth + 1),
+            );
         } else {
-            return attenuation;
+            return into_alpha(attenuation, alpha);
         };
     }
 
-    scene.environment.sample(ray)
+    into_alpha(scene.environment.sample(ray), 0.0)
 }

@@ -1,6 +1,7 @@
 use crate::core::tracer::RenderSettings;
 use crate::render::{RenderTarget, RenderTargetView};
 use bytemuck::{Pod, Zeroable};
+use std::fmt::Debug;
 use std::sync::{Arc, RwLock};
 use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
 use vulkano::image::ImageViewAbstract;
@@ -30,17 +31,7 @@ use self::fs::ty::PostProcessingData;
 mod vs {
     vulkano_shaders::shader! {
         ty: "vertex",
-        src: "
-#version 450
-layout(location = 0) in vec2 position;
-layout(location = 1) in vec2 uv;
-
-layout(location = 0) out vec2 f_uv;
-
-void main() {
-    gl_Position = vec4(position, 0.0, 1.0);
-    f_uv = uv;
-}"
+        path: "src/shaders/viewport_vertex.glsl"
     }
 }
 
@@ -48,86 +39,51 @@ void main() {
 mod fs {
     vulkano_shaders::shader! {
         ty: "fragment",
-        src: "
-#version 450
-
-layout(location = 0) in vec2 f_uv;
-layout(location = 0) out vec4 f_color;
-
-layout(set = 0, binding = 0) uniform sampler2D tex;
-
-layout(push_constant) uniform PostProcessingData {
-  float scale;
-  float gamma;
-  bool aces;
-} ppd;
-
-// float3 ACESFitted(float3 color)
-// {
-//     color = mul(ACESInputMat, color);
-//
-//     // Apply RRT and ODT
-//     color = RRTAndODTFit(color);
-//
-//     color = mul(ACESOutputMat, color);
-//
-//     // Clamp to [0, 1]
-//     color = saturate(color);
-//
-//     return color;
-// }
-
-const mat3 ACESInputMat = 
-{
-    {0.59719, 0.35458, 0.04823},
-    {0.07600, 0.90834, 0.01566},
-    {0.02840, 0.13383, 0.83777}
-};
-
-const mat3 ACESOutputMat = 
-{
-    { 1.60475, -0.53108, -0.07367},
-    {-0.10208,  1.10813, -0.00605},
-    {-0.00327, -0.07276,  1.07602}
-};
-
-vec3 RRTAndODTFit(vec3 v) {
-    vec3 a = v * (v + 0.0245786) - 0.000090537;
-    vec3 b = v * (0.983729 * v + 0.4329510) + 0.238081;
-    return a / b;
-}
-
-vec3 ACESFitted(vec3 color) {
-    color = ACESInputMat * color;
-
-    // Apply RRT and ODT
-    color = RRTAndODTFit(color);
-
-    color = ACESOutputMat * color;
-
-    return color;
-}
-
-vec3 ACESFilm(vec3 x) {
-    float a = 2.51f;
-    float b = 0.03f;
-    float c = 2.43f;
-    float d = 0.59f;
-    float e = 0.14f;
-    return ((x*(a*x+b))/(x*(c*x+d)+e));
-}
-
-void main() {
-    vec3 color = texture(tex, f_uv).xyz * ppd.scale;
-
-    if (ppd.aces) {
-        color = ACESFilm(color);
+        include: [ "src/shaders" ],
+        path: "src/shaders/viewport_fragment.glsl"
     }
+}
 
-    color = pow(color, vec3(1.0 / ppd.gamma));
+#[derive(Clone, Copy, PartialEq)]
+pub enum Tonemap {
+    None,
+    SimpleACES,
+    SimpleReinhard,
+    LumaReinhard,
+    LumaWhitePreservingReinhard,
+    RomBinDaHouse,
+    Filmic,
+    Uncharted2,
+}
 
-    f_color = vec4(color, 1.0);
-}"
+impl Debug for Tonemap {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Tonemap::None => f.write_str("None"),
+            Tonemap::SimpleACES => f.write_str("ACES"),
+            Tonemap::SimpleReinhard => f.write_str("Reinhard"),
+            Tonemap::LumaReinhard => f.write_str("L Reinhard"),
+            Tonemap::LumaWhitePreservingReinhard => f.write_str("LWP Reinhard"),
+            Tonemap::RomBinDaHouse => f.write_str("RBDH"),
+            Tonemap::Filmic => f.write_str("Filmic"),
+            Tonemap::Uncharted2 => f.write_str("Uncharted 2"),
+        }
+    }
+}
+
+#[allow(clippy::wrong_self_convention)]
+impl Tonemap {
+    fn to_int(&self) -> i32 {
+        match self {
+            Tonemap::None => 0,
+            Tonemap::SimpleACES => 1,
+            Tonemap::SimpleReinhard => 2,
+            Tonemap::LumaReinhard => 3,
+            Tonemap::LumaWhitePreservingReinhard => 4,
+            Tonemap::RomBinDaHouse => 5,
+            Tonemap::Filmic => 6,
+            Tonemap::Uncharted2 => 7,
+        }
     }
 }
 
@@ -218,7 +174,13 @@ impl ViewportPipeline {
             index_buffer,
             target,
             target_view,
-            post_processing_data: PostProcessingData { scale: 0.0, aces: false as u32, gamma: 2.2 },
+            post_processing_data: PostProcessingData {
+                scale: 0.0,
+                gamma: 2.2,
+                exposure: 1.0,
+                tonemap: 0,
+                transparent: false as u32,
+            },
         }
     }
 
@@ -235,8 +197,10 @@ impl ViewportPipeline {
             }
         }
 
-        self.post_processing_data.aces = settings.enable_aces as u32;
+        self.post_processing_data.tonemap = settings.tonemap.to_int();
         self.post_processing_data.gamma = settings.gamma;
+        self.post_processing_data.exposure = settings.exposure;
+        self.post_processing_data.transparent = settings.transparent as u32;
 
         let descriptor_set = self.create_descriptor_set(self.target_view.view());
         builder

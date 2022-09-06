@@ -1,6 +1,9 @@
+use super::{
+    ray::{HitRecord, Ray},
+    Float,
+};
 use crate::utils::aabb::AABB;
 use log::*;
-use super::{ray::{Ray, HitRecord}, Float};
 
 /// Acceleration strcture for faster ray-scene intersections
 pub struct BvhTree<'s, S> {
@@ -9,13 +12,7 @@ pub struct BvhTree<'s, S> {
 }
 
 pub trait BoundsCollection: Sync {
-    fn hit(
-        &self,
-        handle: usize,
-        ray: &Ray,
-        t_min: Float,
-        t_max: Float,
-    ) -> Option<HitRecord>;
+    fn hit(&self, handle: usize, ray: &Ray, t_min: Float, t_max: Float) -> Option<HitRecord>;
     fn bounds(&self, handle: usize) -> AABB;
     fn objects(&self) -> Vec<usize>;
 }
@@ -149,7 +146,9 @@ impl BvhNode {
     {
         match self {
             BvhNode::Object(handle) => {
-                return scene.hit(*handle, ray, t_min, t_max).map(|hit| (hit, *handle));
+                return scene
+                    .hit(*handle, ray, t_min, t_max)
+                    .map(|hit| (hit, *handle));
             }
             BvhNode::Split(bounds, left, right) => {
                 if bounds.hit(ray, t_min, t_max) {
@@ -180,14 +179,8 @@ where
                 Some(record_right)
             }
         }
-        (Some(record_left), None) => {
-            Some(record_left)
-        }
-        (None, Some(record_right)) => {
-            Some(record_right)
-        }
-        _ => {
-            None
-        }
+        (Some(record_left), None) => Some(record_left),
+        (None, Some(record_right)) => Some(record_right),
+        _ => None,
     }
 }

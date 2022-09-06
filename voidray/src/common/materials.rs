@@ -8,7 +8,8 @@ use crate::{
     core::{
         material::Material,
         ray::{HitRecord, Ray},
-        Float, scene::{MaterialHandle, Scene},
+        scene::{MaterialHandle, Scene},
+        Float,
     },
     utils::{
         color::Color,
@@ -16,9 +17,7 @@ use crate::{
     },
 };
 
-pub struct Materials {
-
-}
+pub struct Materials {}
 
 impl Materials {
     pub fn lambertian(scene: &mut Scene, color: Color) -> MaterialHandle {
@@ -33,16 +32,38 @@ impl Materials {
         scene.add_material(Arc::new(Dielectric::new(ir)))
     }
 
+    pub fn colored_dielectric(
+        scene: &mut Scene,
+        color: Color,
+        ir: Float,
+        transparency: Float,
+    ) -> MaterialHandle {
+        scene.add_material(Arc::new(MixMaterial::new(
+            Box::new(Lambertian::new(color)),
+            Box::new(Dielectric::new(ir)),
+            transparency,
+        )))
+    }
+
     pub fn emissive(scene: &mut Scene, strength: Float) -> MaterialHandle {
         scene.add_material(Arc::new(Emission::new(Color::new(1.0, 1.0, 1.0), strength)))
     }
 
-    pub fn diffuse_glossy(scene: &mut Scene, color: Color, roughness: Float, reflectiveness: Float) -> MaterialHandle {
+    pub fn colored_emissive(scene: &mut Scene, color: Color, strength: Float) -> MaterialHandle {
+        scene.add_material(Arc::new(Emission::new(color, strength)))
+    }
+
+    pub fn diffuse_glossy(
+        scene: &mut Scene,
+        color: Color,
+        roughness: Float,
+        reflectiveness: Float,
+    ) -> MaterialHandle {
         scene.add_material(Arc::new(MixMaterial::new(
-                    Box::new(Lambertian::new(color)),
-                    Box::new(Metal::new(Color::new(1.0, 1.0, 1.0), roughness)),
-                    reflectiveness
-                )))
+            Box::new(Lambertian::new(color)),
+            Box::new(Metal::new(Color::new(1.0, 1.0, 1.0), roughness)),
+            reflectiveness,
+        )))
     }
 }
 
@@ -57,7 +78,7 @@ impl Lambertian {
 }
 
 impl Material for Lambertian {
-    fn scatter(&self, ray: &Ray, hit: &HitRecord) -> (Color, Option<Ray>) {
+    fn scatter(&self, ray: &Ray, hit: &HitRecord) -> (Color, bool, Option<Ray>) {
         let mut scatter_direction = hit.normal + sample_unit_sphere_surface();
 
         if near_zero(scatter_direction) {
@@ -66,7 +87,7 @@ impl Material for Lambertian {
         }
 
         let scattered = Ray::new(hit.point, scatter_direction);
-        (self.albedo, Some(scattered))
+        (self.albedo, false, Some(scattered))
     }
 }
 
@@ -82,7 +103,7 @@ impl Metal {
 }
 
 impl Material for Metal {
-    fn scatter(&self, ray: &Ray, hit: &HitRecord) -> (Color, Option<Ray>) {
+    fn scatter(&self, ray: &Ray, hit: &HitRecord) -> (Color, bool, Option<Ray>) {
         let reflected = reflect(ray.direction, hit.normal).normalize();
         let scattered = Ray::new(
             hit.point,
@@ -90,9 +111,9 @@ impl Material for Metal {
         );
 
         if scattered.direction.dot(hit.normal) > 0.0 {
-            (self.albedo, Some(scattered))
+            (self.albedo, false, Some(scattered))
         } else {
-            (Color::new(0.0, 0.0, 0.0), None)
+            (Color::new(0.0, 0.0, 0.0), false, None)
         }
     }
 }
@@ -110,8 +131,8 @@ impl Emission {
 }
 
 impl Material for Emission {
-    fn scatter(&self, _ray: &Ray, _hit: &HitRecord) -> (Color, Option<Ray>) {
-        (self.color, None)
+    fn scatter(&self, _ray: &Ray, _hit: &HitRecord) -> (Color, bool, Option<Ray>) {
+        (self.color, false, None)
     }
 }
 
@@ -133,7 +154,7 @@ impl Dielectric {
 }
 
 impl Material for Dielectric {
-    fn scatter(&self, ray: &Ray, hit: &HitRecord) -> (Color, Option<Ray>) {
+    fn scatter(&self, ray: &Ray, hit: &HitRecord) -> (Color, bool, Option<Ray>) {
         let refraction_ratio = if hit.front_face {
             1.0 / self.ir
         } else {
@@ -144,6 +165,7 @@ impl Material for Dielectric {
         let cos_theta = Float::min(hit.normal.dot(-unit_direction), 1.0);
         let sin_theta = (1.0 - cos_theta * cos_theta).sqrt();
 
+        let mut refracted = false;
         let cannot_refract: bool = (refraction_ratio * sin_theta) > 1.0;
         let direction = if cannot_refract
             || Dielectric::reflectance(cos_theta, refraction_ratio)
@@ -151,11 +173,13 @@ impl Material for Dielectric {
         {
             reflect(unit_direction, hit.normal)
         } else {
+            refracted = true;
             refract(unit_direction, hit.normal, refraction_ratio)
         };
 
         (
             Color::new(1.0, 1.0, 1.0),
+            refracted,
             Some(Ray::new(hit.point, direction)),
         )
     }
@@ -169,7 +193,7 @@ pub struct MixMaterial {
 }
 
 impl Material for MixMaterial {
-    fn scatter(&self, ray: &Ray, hit: &HitRecord) -> (Color, Option<Ray>) {
+    fn scatter(&self, ray: &Ray, hit: &HitRecord) -> (Color, bool, Option<Ray>) {
         if thread_rng().gen_range(0.0..1.0) >= self.factor {
             self.first.scatter(ray, hit)
         } else {

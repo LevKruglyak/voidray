@@ -1,14 +1,14 @@
-use cgmath::{Vector2, Vector3};
+use cgmath::{Vector2, Vector3, Vector4};
 
+pub mod bvh;
 pub mod camera;
 pub mod environment;
 pub mod material;
+pub mod mesh;
 pub mod object;
 pub mod ray;
 pub mod scene;
 pub mod tracer;
-pub mod bvh;
-pub mod mesh;
 
 #[cfg(feature = "high_precision")]
 pub type Float = f64;
@@ -24,5 +24,6 @@ pub static PI: Float = std::f32::consts::PI;
 #[cfg(not(feature = "high_precision"))]
 pub static INF: Float = std::f32::INFINITY;
 
+pub type Vec4 = Vector4<Float>;
 pub type Vec3 = Vector3<Float>;
 pub type Vec2 = Vector2<Float>;
