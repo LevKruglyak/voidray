@@ -223,6 +223,7 @@ where
         let vulkano_config = VulkanoConfig {
             instance_create_info: InstanceCreateInfo {
                 enabled_extensions: options.instance_extensions,
+                enumerate_portability: true,
                 ..InstanceCreateInfo::default()
             },
             device_features: options.features,
