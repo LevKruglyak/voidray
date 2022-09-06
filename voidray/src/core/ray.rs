@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use cgmath::InnerSpace;
 
 use super::{Float, Vec3};
@@ -44,6 +46,18 @@ impl HitRecord {
             t,
             front_face,
         }
+    }
+}
+
+impl PartialEq for HitRecord {
+    fn eq(&self, other: &Self) -> bool {
+        self.t == other.t
+    }
+}
+
+impl PartialOrd for HitRecord {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.t.partial_cmp(&other.t)
     }
 }
 

@@ -25,6 +25,10 @@ impl Materials {
         scene.add_material(Arc::new(Lambertian::new(color)))
     }
 
+    pub fn metal(scene: &mut Scene, color: Color, fuzz: Float) -> MaterialHandle {
+        scene.add_material(Arc::new(Metal::new(color, fuzz)))
+    }
+
     pub fn dielectric(scene: &mut Scene, ir: Float) -> MaterialHandle {
         scene.add_material(Arc::new(Dielectric::new(ir)))
     }

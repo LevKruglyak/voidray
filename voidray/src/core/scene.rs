@@ -6,13 +6,14 @@ use super::{
     camera::{Camera, RayOrigin},
     environment::{Environment, HDRIEnvironment, UniformEnvironment},
     object::{Object, Shape},
-    Vec3, material::Material, ray::Hittable,
+    Vec3, material::Material, ray::Hittable, bvh::BvhTree, mesh::Mesh,
 };
 
 pub struct Scene {
     pub camera: Camera,
     pub objects: Vec<Object>,
     pub shapes: Vec<Shape>,
+    pub meshes: Vec<Arc<Mesh>>,
     pub materials: Vec<Arc<dyn Material>>,
     pub environment: Arc<dyn Environment>,
 }
@@ -33,6 +34,12 @@ impl Scene {
         self.shapes.len() - 1
     }
 
+    pub fn add_mesh(&mut self, mesh: Arc<Mesh>) -> ShapeHandle {
+        self.meshes.push(mesh);
+        self.shapes.push(Shape::Mesh(self.meshes.len() - 1));
+        self.shapes.len() - 1
+    }
+
     pub fn add_object(&mut self, material: MaterialHandle, shape: ShapeHandle) -> ObjectHandle {
         self.objects.push(Object { material, shape, });
         self.objects.len() - 1
@@ -45,6 +52,10 @@ impl Scene {
     pub fn shape_ref(&self, handle: ShapeHandle) -> &Shape {
         &self.shapes[handle]
     }
+
+    pub fn mesh_ref(&self, handle: MeshHandle) -> &Mesh {
+        self.meshes[handle].as_ref()
+    }
 }
 
 impl Default for Scene {
@@ -54,23 +65,22 @@ impl Default for Scene {
             materials: Vec::new(),
             objects: Vec::new(),
             shapes: Vec::new(),
+            meshes: Vec::new(),
             environment: Arc::new(HDRIEnvironment::new("voidray/assets/studio.exr")),
         };
 
         let ball1_mat = Materials::dielectric(&mut scene, 1.33);
-        let ball2_mat = Materials::lambertian(&mut scene, Color::new(1.0, 0.1, 0.05));
-        let emissive = Materials::emissive(&mut scene, 10.0);
-        let ground_mat = Materials::lambertian(&mut scene, Color::new(0.2, 0.2, 0.2));
+        let stand_mat = Materials::lambertian(&mut scene, Color::new(0.053, 0.053, 0.053));
+        let ground_mat = Materials::lambertian(&mut scene, Color::new(0.01, 0.01, 0.01));
 
-        let ball1_shape = Shapes::sphere(&mut scene, Vec3::new(2.0, 2.0, 0.0), 3.0);
-        let ball2_shape = Shapes::sphere(&mut scene, Vec3::new(-2.0, 2.0, 0.0), 3.0);
-        let emissive_shape = Shapes::sphere(&mut scene, Vec3::new(0.0, 20.0, 0.0), 3.0);
-        let ground_shape = Shapes::ground_plane(&mut scene, -1.0);
+        let material_main = scene.add_mesh(Arc::new(Mesh::from_file("voidray/assets/material_testing_main.obj")));
+        let material_stand = scene.add_mesh(Arc::new(Mesh::from_file("voidray/assets/material_testing_stand.obj")));
+        let ground_shape = Shapes::ground_plane(&mut scene, 0.0);
+        // let cube_shape = scene.add_mesh(Arc::new(Mesh::from_file("voidray/assets/fancy_monkey.obj")));
 
-        scene.add_object(ground_mat, ground_shape);
-        scene.add_object(ball1_mat, ball1_shape);
-        scene.add_object(ball2_mat, ball2_shape);
-        // scene.add_object(emissive, emissive_shape);
+        // scene.add_object(ground_mat, ground_shape);
+        scene.add_object(material_main, material_main);
+        scene.add_object(stand_mat, material_stand);
 
         scene
     }
@@ -84,6 +94,7 @@ impl Scene {
             shapes: self.shapes.clone(),
             materials: self.materials.clone(),
             environment: self.environment.clone(),
+            meshes: self.meshes.clone(),
         }
     }
 }
@@ -94,6 +105,7 @@ pub struct SceneAcceleration {
     pub shapes: Vec<Shape>,
     pub materials: Vec<Arc<dyn Material>>,
     pub environment: Arc<dyn Environment>,
+    pub meshes: Vec<Arc<Mesh>>,
 }
 
 impl SceneAcceleration {
@@ -103,5 +115,9 @@ impl SceneAcceleration {
 
     pub fn shape_ref(&self, handle: ShapeHandle) -> &Shape {
         &self.shapes[handle]
+    }
+
+    pub fn mesh_ref(&self, handle: MeshHandle) -> &Mesh {
+        self.meshes[handle].as_ref()
     }
 }

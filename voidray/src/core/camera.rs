@@ -56,10 +56,10 @@ impl Camera {
 impl Default for Camera {
     fn default() -> Self {
         Self {
-            eye: Vec3::new(0.0, 2.0, 10.0),
+            eye: Vec3::new(0.0, 1.0, 4.0),
             direction: Vec3::new(0.0, -0.1, 1.0),
             up: Vec3::new(0.0, 1.0, 0.0),
-            fov: 90.0,
+            fov: 70.0,
             aspect_ratio: 1.0,
         }
     }

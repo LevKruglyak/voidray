@@ -11,5 +11,5 @@ pub struct Object {
 #[derive(Clone)]
 pub enum Shape {
     Analytic(Arc<dyn Hittable>),
-    // Mesh(MeshHandle),
+    Mesh(MeshHandle),
 }

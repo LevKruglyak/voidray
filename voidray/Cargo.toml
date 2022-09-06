@@ -39,6 +39,7 @@ cgmath = "0.18.0"
 
 # IO
 exr = "1.4.2"
+obj-rs = "0.7"
 
 hatchery = { path = "../hatchery", features = ["egui"] }
 

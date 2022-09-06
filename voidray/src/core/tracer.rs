@@ -2,7 +2,7 @@ use cgmath::{ElementWise, InnerSpace};
 
 use crate::utils::color::Color;
 // use log::*;
-use super::{ray::Ray, scene::SceneAcceleration, Float, Vec3, object::Shape};
+use super::{ray::{Ray, Hittable}, scene::SceneAcceleration, Float, Vec3, object::Shape};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum RenderMode {
@@ -60,7 +60,8 @@ fn trace_ray_internal(
     for object in &scene.objects {
         let shape = scene.shape_ref(object.shape);
         if let Some(hit) = match shape {
-            Shape::Analytic(hittable) => hittable.hit(ray, 0.0001, closest_so_far),
+            Shape::Analytic(hittable) => hittable.hit(ray, 0.000001, closest_so_far),
+            Shape::Mesh(handle) => scene.mesh_ref(*handle).hit(ray, 0.000001, closest_so_far),
         } {
             closest_so_far = hit.t;
             result = Some((hit, object));

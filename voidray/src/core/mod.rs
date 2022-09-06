@@ -8,6 +8,7 @@ pub mod ray;
 pub mod scene;
 pub mod tracer;
 pub mod bvh;
+pub mod mesh;
 
 #[cfg(feature = "high_precision")]
 pub type Float = f64;
