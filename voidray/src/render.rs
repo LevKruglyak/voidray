@@ -172,6 +172,13 @@ impl Renderer {
                     }
 
                     {
+                        let mut target_write = target.write().unwrap();
+                        *thread_sample_count.write().unwrap() = target_write.samples;
+                        target_write.samples = (settings.samples_per_pixel, settings.samples_per_pixel);
+                        target_write.synced = false;
+                    }
+
+                    {
                         let mut start_time_write = thread_time.write().unwrap(); 
                         let started = start_time_write.0;
                         *start_time_write = (started, Some(Instant::now()));
