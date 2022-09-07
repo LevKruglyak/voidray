@@ -146,7 +146,8 @@ impl Triangle {
         let s = ray.origin - v0.position;
         let u = f * s.dot(h);
 
-        if (0.0..1.0).contains(&u) {
+        #[allow(clippy::manual_range_contains)]
+        if u < 0.0 || u > 1.0 {
             return None;
         }
 
