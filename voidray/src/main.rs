@@ -14,6 +14,7 @@ use crate::render::RenderTarget;
 use egui::CollapsingHeader;
 use egui::ComboBox;
 use egui::DragValue;
+use egui::ProgressBar;
 use hatchery::engine::EngineContext;
 use hatchery::{
     engine::{Engine, EngineApi, EngineOptions, Hatchery, WindowOptions},
@@ -253,12 +254,22 @@ impl Engine for VoidrayEngine {
                         ui.end_row();
                     });
 
-                ui.add_space(10.0);
-
                 let samples = self.renderer.sample_count();
                 let time = self.renderer.elapsed_time();
+
+                ui.add_space(5.0);
+                if currently_rendering {
+                    ui.add(ProgressBar::new(samples.0 as f32 / samples.1 as f32).show_percentage());
+                    ui.add_space(5.0);
+                }
                 ui.label(format!("Samples: {}/{}", samples.0, samples.1));
-                ui.label(format!("Elapsed time: {}s", time.as_secs_f32()))
+                ui.label(format!("Elapsed time: {:.4}s", time.as_secs_f32()));
+                if currently_rendering && samples.0 > 0 {
+                    ui.label(format!(
+                        "Remaining time: {:.0}s",
+                        (samples.1 - samples.0) as f32 * (time.as_secs() as f32 / samples.0 as f32)
+                    ));
+                }
             });
 
         egui::SidePanel::right("right_panel")

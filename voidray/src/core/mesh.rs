@@ -4,8 +4,8 @@ use crate::utils::{
     math::degrees_to_radians,
 };
 use cgmath::InnerSpace;
-use obj::{load_obj, Obj};
 use log::*;
+use obj::{load_obj, Obj};
 use std::fs::File;
 use std::io::BufReader;
 
@@ -56,7 +56,12 @@ impl Mesh {
             });
         }
 
-        info!("loaded '{}' with {} verticies, {} faces", path, vertices.len(), obj.indices.len() / 3);
+        info!(
+            "loaded '{}' with {} verticies, {} faces",
+            path,
+            vertices.len(),
+            obj.indices.len() / 3
+        );
         Self::from_buffers(vertices, obj.indices)
     }
 

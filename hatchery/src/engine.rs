@@ -1,10 +1,7 @@
 use std::sync::Arc;
 
 use vulkano::{
-    command_buffer::{
-        AutoCommandBufferBuilder,
-        PrimaryAutoCommandBuffer,
-    },
+    command_buffer::{AutoCommandBufferBuilder, PrimaryAutoCommandBuffer},
     device::{physical::PhysicalDeviceType, Device, DeviceExtensions, Features, Queue},
     format::Format,
     instance::{InstanceCreateInfo, InstanceExtensions},
