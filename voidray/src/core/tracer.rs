@@ -1,4 +1,4 @@
-use cgmath::{ElementWise, InnerSpace};
+use cgmath::InnerSpace;
 
 use crate::{
     pipeline::Tonemap,

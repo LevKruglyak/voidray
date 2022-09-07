@@ -6,9 +6,8 @@ use crate::{
 };
 
 use super::{
-    bvh::BvhTree,
     camera::{Camera, RayOrigin},
-    environment::{Environment, HDRIEnvironment, UniformEnvironment},
+    environment::{Environment, HDRIEnvironment},
     material::Material,
     mesh::Mesh,
     object::{Object, Shape},

@@ -3,7 +3,6 @@ use super::{
     Float,
 };
 use crate::utils::aabb::AABB;
-use log::*;
 
 /// Acceleration strcture for faster ray-scene intersections
 pub struct BvhTree<'s, S> {

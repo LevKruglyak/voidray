@@ -12,11 +12,8 @@ use crate::core::scene::Scene;
 use crate::render::RenderTarget;
 
 use egui::CollapsingHeader;
-use egui::Color32;
 use egui::ComboBox;
 use egui::DragValue;
-use egui::ScrollArea;
-use gui::Editable;
 use hatchery::engine::EngineContext;
 use hatchery::{
     engine::{Engine, EngineApi, EngineOptions, Hatchery, WindowOptions},
@@ -256,10 +253,12 @@ impl Engine for VoidrayEngine {
                         ui.end_row();
                     });
 
+                ui.add_space(10.0);
+
                 let samples = self.renderer.sample_count();
-                if currently_rendering {
-                    ui.label(format!("Samples: {}/{}", samples.0, samples.1));
-                }
+                let time = self.renderer.elapsed_time();
+                ui.label(format!("Samples: {}/{}", samples.0, samples.1));
+                ui.label(format!("Elapsed time: {}s", time.as_secs_f32()))
             });
 
         egui::SidePanel::right("right_panel")

@@ -1,6 +1,7 @@
 use crossbeam::channel::{bounded, Sender};
 use rand::thread_rng;
 use rand::{distributions::Uniform, prelude::Distribution};
+use std::time::Instant;
 use std::{
     sync::{Arc, RwLock},
     thread,
@@ -27,7 +28,7 @@ use rayon::prelude::*;
 use crate::core::scene::Scene;
 use crate::core::tracer::{trace_ray, RenderSettings};
 use crate::core::Float;
-use crate::utils::color::{Color, ColorAlpha};
+use crate::utils::color::ColorAlpha;
 
 pub enum RenderAction {
     Start,
@@ -39,6 +40,7 @@ pub struct Renderer {
     queue: Arc<Queue>,
     currently_rendering: Arc<RwLock<bool>>,
     sample_count: Arc<RwLock<(u32, u32)>>,
+    time: Arc<RwLock<(Option<Instant>, Option<Instant>)>>,
     sender: Sender<RenderAction>,
 }
 
@@ -52,11 +54,13 @@ impl Renderer {
     ) -> Self {
         let (sender, receiver) = bounded(0);
 
-        let sample_count = Arc::new(RwLock::new((0, 0)));
+        let sample_count = Arc::new(RwLock::new((0, settings.read().unwrap().samples_per_pixel)));
+        let time = Arc::new(RwLock::new((None, None)));
         let currently_rendering = Arc::new(RwLock::new(false));
 
         let thread_currently_rendering = currently_rendering.clone();
         let thread_sample_count = sample_count.clone();
+        let thread_time = time.clone();
 
         let thread_device = device.clone();
         let thread_queue = queue.clone();
@@ -64,8 +68,15 @@ impl Renderer {
         thread::spawn(move || {
             loop {
                 if let Ok(RenderAction::Start) = receiver.try_recv() {
-                    *thread_currently_rendering.write().unwrap() = true;
+                    {
+                        *thread_currently_rendering.write().unwrap() = true;
+                    }
+
                     info!("started rendering...");
+
+                    {
+                        *thread_time.write().unwrap() = (Some(Instant::now()), None);
+                    }
 
                     let settings = {
                         let settings = settings.read().unwrap();
@@ -160,6 +171,11 @@ impl Renderer {
                         thread::sleep(Duration::from_millis(1));
                     }
 
+                    {
+                        let mut start_time_write = thread_time.write().unwrap(); 
+                        let started = start_time_write.0;
+                        *start_time_write = (started, Some(Instant::now()));
+                    }
                     info!("finished rendering...");
 
                     *thread_currently_rendering.write().unwrap() = false;
@@ -174,6 +190,7 @@ impl Renderer {
             device,
             queue,
             currently_rendering,
+            time,
             sample_count,
             sender,
         }
@@ -189,6 +206,16 @@ impl Renderer {
 
     pub fn sample_count(&self) -> (u32, u32) {
         *self.sample_count.read().unwrap()
+    }
+
+    pub fn elapsed_time(&self) -> Duration {
+        let time = self.time.read().unwrap();
+        if let (Some(start), end) = *time {
+            #[allow(clippy::or_fun_call)]
+            return end.unwrap_or(Instant::now()).duration_since(start);
+        }
+
+        Duration::default()
     }
 }
 

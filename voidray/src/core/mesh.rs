@@ -4,8 +4,8 @@ use crate::utils::{
     math::degrees_to_radians,
 };
 use cgmath::InnerSpace;
-use log::*;
 use obj::{load_obj, Obj};
+use log::*;
 use std::fs::File;
 use std::io::BufReader;
 
@@ -56,6 +56,7 @@ impl Mesh {
             });
         }
 
+        info!("loaded '{}' with {} verticies, {} faces", path, vertices.len(), obj.indices.len() / 3);
         Self::from_buffers(vertices, obj.indices)
     }
 
@@ -145,7 +146,7 @@ impl Triangle {
         let s = ray.origin - v0.position;
         let u = f * s.dot(h);
 
-        if u < 0.0 || u > 1.0 {
+        if (0.0..1.0).contains(&u) {
             return None;
         }
 

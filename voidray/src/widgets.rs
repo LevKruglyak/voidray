@@ -1,7 +1,4 @@
-use std::ops::RangeInclusive;
-
 use egui::{
-    emath::{format_with_decimals_in_range, Numeric},
     Color32, NumExt, Response, Sense, Stroke, TextStyle, Ui, Vec2, Widget, WidgetInfo, WidgetText,
     WidgetType,
 };

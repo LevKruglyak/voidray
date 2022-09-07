@@ -13,7 +13,7 @@ use vulkano::{
 use vulkano_util::{context::VulkanoContext, renderer::SwapchainImageView};
 
 use crate::{
-    engine::{Engine, EngineApi, EngineContext},
+    engine::{Engine, EngineApi},
     gui::GuiImplementation,
 };
 
