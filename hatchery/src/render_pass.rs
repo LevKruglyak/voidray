@@ -2,8 +2,7 @@ use std::sync::Arc;
 
 use vulkano::{
     command_buffer::{
-        AutoCommandBufferBuilder, CommandBufferUsage, RenderPassBeginInfo,
-        SecondaryAutoCommandBuffer, SubpassContents,
+        AutoCommandBufferBuilder, CommandBufferUsage, RenderPassBeginInfo, SubpassContents,
     },
     device::{Device, Queue},
     format::Format,
@@ -13,7 +12,10 @@ use vulkano::{
 };
 use vulkano_util::{context::VulkanoContext, renderer::SwapchainImageView};
 
-use crate::gui::GuiImplementation;
+use crate::{
+    engine::{Engine, EngineApi, EngineContext},
+    gui::GuiImplementation,
+};
 
 pub struct FinalRenderPass {
     device: Arc<Device>,
@@ -59,16 +61,18 @@ impl FinalRenderPass {
         .expect("error creating render pass")
     }
 
-    pub fn render<F, G>(
+    pub fn render<F, E>(
         &self,
         before_future: F,
-        gui: &mut G,
+        gui: &mut E::Gui,
+        api: &mut EngineApi,
+        subpass: Subpass,
         target: SwapchainImageView,
-        viewport_command_buffer: SecondaryAutoCommandBuffer,
+        engine: &mut E,
     ) -> Box<dyn GpuFuture>
     where
         F: GpuFuture + 'static,
-        G: GuiImplementation + 'static,
+        E: Engine + 'static,
     {
         // Get dimensions
         let image_dimensions = target.image().dimensions();
@@ -102,10 +106,9 @@ impl FinalRenderPass {
             )
             .unwrap();
 
-        // Render viewport
-        primary_builder
-            .execute_commands(viewport_command_buffer)
-            .unwrap();
+        let scale_factor = api.window().scale_factor() as f32;
+        let viewport = gui.viewport(scale_factor);
+        engine.render(&mut primary_builder, subpass, viewport, api);
 
         // Render gui
         primary_builder

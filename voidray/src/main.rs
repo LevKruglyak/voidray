@@ -13,6 +13,7 @@ use crate::render::RenderTarget;
 
 use egui::ComboBox;
 use gui::Editable;
+use hatchery::engine::EngineContext;
 use hatchery::{
     engine::{Engine, EngineApi, EngineOptions, Hatchery, WindowOptions},
     gui::egui_implementation::EguiImplementation,
@@ -21,8 +22,10 @@ pub use log::*;
 use pipeline::Tonemap;
 use pipeline::ViewportPipeline;
 use simplelog::*;
+use vulkano::command_buffer::PrimaryAutoCommandBuffer;
+use vulkano::render_pass::Subpass;
 use vulkano::{
-    command_buffer::{AutoCommandBufferBuilder, SecondaryAutoCommandBuffer},
+    command_buffer::AutoCommandBufferBuilder,
     pipeline::graphics::viewport::Viewport,
 };
 use winit::dpi::LogicalSize;
@@ -43,8 +46,10 @@ struct VoidrayEngine {
     renderer: Renderer,
 }
 
-impl Engine<EguiImplementation> for VoidrayEngine {
-    fn init(api: &mut EngineApi) -> Self {
+impl Engine for VoidrayEngine {
+    type Gui = EguiImplementation;
+
+    fn init(context: &mut EngineContext<Self::Gui>) -> Self {
         // Initialize logging
         CombinedLogger::init(vec![TermLogger::new(
             LevelFilter::Debug,
@@ -56,6 +61,9 @@ impl Engine<EguiImplementation> for VoidrayEngine {
 
         let dimensions = [1000, 1000];
 
+        let subpass = context.viewport_subpass();
+        let api = context.api_mut();
+
         let scene = Arc::new(RwLock::new(Scene::default()));
         let target = Arc::new(RwLock::new(RenderTarget::new(&api.context, dimensions)));
         let target_view = Arc::new(RenderTargetView::new(&api.context, dimensions));
@@ -64,7 +72,7 @@ impl Engine<EguiImplementation> for VoidrayEngine {
         Self {
             pipeline: ViewportPipeline::new(
                 api.graphics_queue(),
-                api.viewport_subpass(),
+                subpass,
                 target.clone(),
                 target_view,
             ),
@@ -156,14 +164,46 @@ impl Engine<EguiImplementation> for VoidrayEngine {
                     ComboBox::from_id_source("tonemap")
                         .selected_text(format!("{:?}", settings.tonemap))
                         .show_ui(ui, |ui| {
-                            ui.selectable_value(&mut settings.tonemap, Tonemap::None, format!("{:?}", Tonemap::None));
-                            ui.selectable_value(&mut settings.tonemap, Tonemap::SimpleACES, format!("{:?}", Tonemap::SimpleACES));
-                            ui.selectable_value(&mut settings.tonemap, Tonemap::SimpleReinhard, format!("{:?}", Tonemap::SimpleReinhard));
-                            ui.selectable_value(&mut settings.tonemap, Tonemap::LumaReinhard, format!("{:?}", Tonemap::LumaReinhard));
-                            ui.selectable_value(&mut settings.tonemap, Tonemap::LumaWhitePreservingReinhard, format!("{:?}", Tonemap::LumaWhitePreservingReinhard));
-                            ui.selectable_value(&mut settings.tonemap, Tonemap::RomBinDaHouse, format!("{:?}", Tonemap::RomBinDaHouse));
-                            ui.selectable_value(&mut settings.tonemap, Tonemap::Filmic, format!("{:?}", Tonemap::Filmic));
-                            ui.selectable_value(&mut settings.tonemap, Tonemap::Uncharted2, format!("{:?}", Tonemap::Uncharted2));
+                            ui.selectable_value(
+                                &mut settings.tonemap,
+                                Tonemap::None,
+                                format!("{:?}", Tonemap::None),
+                            );
+                            ui.selectable_value(
+                                &mut settings.tonemap,
+                                Tonemap::SimpleACES,
+                                format!("{:?}", Tonemap::SimpleACES),
+                            );
+                            ui.selectable_value(
+                                &mut settings.tonemap,
+                                Tonemap::SimpleReinhard,
+                                format!("{:?}", Tonemap::SimpleReinhard),
+                            );
+                            ui.selectable_value(
+                                &mut settings.tonemap,
+                                Tonemap::LumaReinhard,
+                                format!("{:?}", Tonemap::LumaReinhard),
+                            );
+                            ui.selectable_value(
+                                &mut settings.tonemap,
+                                Tonemap::LumaWhitePreservingReinhard,
+                                format!("{:?}", Tonemap::LumaWhitePreservingReinhard),
+                            );
+                            ui.selectable_value(
+                                &mut settings.tonemap,
+                                Tonemap::RomBinDaHouse,
+                                format!("{:?}", Tonemap::RomBinDaHouse),
+                            );
+                            ui.selectable_value(
+                                &mut settings.tonemap,
+                                Tonemap::Filmic,
+                                format!("{:?}", Tonemap::Filmic),
+                            );
+                            ui.selectable_value(
+                                &mut settings.tonemap,
+                                Tonemap::Uncharted2,
+                                format!("{:?}", Tonemap::Uncharted2),
+                            );
                         });
                 });
 
@@ -207,15 +247,45 @@ impl Engine<EguiImplementation> for VoidrayEngine {
             .show(context, |ui| {});
     }
 
+    // fn render(
+    //     &mut self,
+    //     subpass: vulkano::render_pass::Subpass,
+    //     viewport: Viewport,
+    //     api: &mut EngineApi,
+    // ) -> SecondaryAutoCommandBuffer {
+    //     let secondary_builder = AutoCommandBufferBuilder::secondary(
+    //         api.context.device(),
+    //         api.context.graphics_queue().family(),
+    //         CommandBufferUsage::MultipleSubmit,
+    //         CommandBufferInheritanceInfo {
+    //             render_pass: Some(subpass.into()),
+    //             ..Default::default()
+    //         },
+    //     )
+    //     .unwrap();
+    //     secondary_builder.build().unwrap()
+    // }
+
     fn render(
         &mut self,
-        builder: &mut AutoCommandBufferBuilder<SecondaryAutoCommandBuffer>,
+        command_buffer: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>,
+        subpass: Subpass,
         viewport: Viewport,
+        api: &mut EngineApi,
     ) {
-        let samples = self.renderer.sample_count();
         self.pipeline
-            .draw(builder, &self.settings.read().unwrap(), viewport);
+            .draw(command_buffer, &self.settings.read().unwrap(), viewport);
     }
+
+    // fn render(
+    //     &mut self,
+    //     builder: &mut AutoCommandBufferBuilder<SecondaryAutoCommandBuffer>,
+    //     viewport: Viewport,
+    // ) {
+    //     let samples = self.renderer.sample_count();
+    //     self.pipeline
+    //         .draw(builder, &self.settings.read().unwrap(), viewport);
+    // }
 }
 
 fn main() {
@@ -227,5 +297,5 @@ fn main() {
         ..EngineOptions::default()
     };
 
-    Hatchery::<VoidrayEngine, _>::run(options);
+    Hatchery::<VoidrayEngine>::run(options);
 }

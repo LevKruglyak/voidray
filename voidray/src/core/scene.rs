@@ -76,18 +76,27 @@ impl Default for Scene {
             environment: Arc::new(HDRIEnvironment::new("voidray/assets/studio.exr")),
         };
 
+        scene.camera = Camera {
+            eye: Vec3::new(0.4, 0.6, 3.0),
+            direction: Vec3::new(0.0, -0.1, 1.0),
+            up: Vec3::new(0.0, 1.0, 0.0),
+            fov: 70.0,
+            aspect_ratio: 1.0,
+        };
+
         let ball1_mat = Materials::dielectric(&mut scene, 1.33);
+        let gold = Materials::metal(&mut scene, Color::new(0.83, 0.68, 0.07), 0.03);
         let stand_mat = Materials::lambertian(&mut scene, Color::new(0.053, 0.053, 0.053));
         let ground_mat = Materials::lambertian(&mut scene, Color::new(0.1, 0.01, 0.01));
 
-        let red = Materials::colored_emissive(&mut scene, Colors::red(), 100.0);
+        let red = Materials::colored_emissive(&mut scene, Colors::red(), 1000.0);
         let blue = Materials::colored_emissive(&mut scene, Colors::green(), 100.0);
         let green = Materials::colored_emissive(&mut scene, Colors::blue(), 100.0);
 
-        let red_shape = Shapes::sphere(&mut scene, Vec3::new(2.0, 3.0, 0.0), 0.5);
-        let blue_shape = Shapes::sphere(&mut scene, Vec3::new(0.0, 3.0, 0.0), 0.5);
+        let red_shape = Shapes::sphere(&mut scene, Vec3::new(1.3, 0.5, 0.0), 0.25);
+        let gold_shape = Shapes::sphere(&mut scene, Vec3::new(-0.3, 0.20, 1.5), 0.20);
         let green_shape = Shapes::sphere(&mut scene, Vec3::new(-2.0, 3.0, 0.0), 0.5);
-
+        //
         let material_main = scene.add_mesh(Arc::new(Mesh::from_file(
             "voidray/assets/material_testing_main.obj",
         )));
@@ -98,8 +107,8 @@ impl Default for Scene {
         // let cube_shape = scene.add_mesh(Arc::new(Mesh::from_file("voidray/assets/fancy_monkey.obj")));
 
         scene.add_object(ground_mat, ground_shape);
-        // scene.add_object(red, red_shape);
-        // scene.add_object(blue, blue_shape);
+        scene.add_object(red, red_shape);
+        // scene.add_object(gold, gold_shape);
         // scene.add_object(green, green_shape);
         // scene.add_object(ball1_mat, cube_shape);
         scene.add_object(ball1_mat, material_main);

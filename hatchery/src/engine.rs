@@ -3,7 +3,7 @@ use std::sync::Arc;
 use vulkano::{
     command_buffer::{
         AutoCommandBufferBuilder, CommandBufferInheritanceInfo, CommandBufferUsage,
-        SecondaryAutoCommandBuffer,
+        PrimaryAutoCommandBuffer,
     },
     device::{physical::PhysicalDeviceType, Device, DeviceExtensions, Features, Queue},
     format::Format,
@@ -66,21 +66,20 @@ impl Default for EngineOptions {
 }
 
 /// Wrapper struct for engine methods
-pub struct Hatchery<E, G> {
-    _pd: std::marker::PhantomData<(E, G)>,
+pub struct Hatchery<E> {
+    _pd: std::marker::PhantomData<E>,
 }
 
-impl<E, G> Hatchery<E, G>
+impl<E> Hatchery<E>
 where
-    E: Engine<G> + 'static,
-    G: GuiImplementation + 'static,
+    E: Engine + 'static,
 {
     /// Start the engine loop, open the window, initialize all of the graphics contexts
     pub fn run(options: EngineOptions) {
         let event_loop = EventLoop::new();
-        let mut context = EngineContext::<G>::new(options, &event_loop);
+        let mut context = EngineContext::<E::Gui>::new(options, &event_loop);
 
-        let mut engine = E::init(&mut context.api);
+        let mut engine = E::init(&mut context);
 
         engine.start(&mut context.api);
 
@@ -123,41 +122,22 @@ where
         });
     }
 
-    fn render(engine: &mut E, context: &mut EngineContext<G>)
+    fn render(engine: &mut E, context: &mut EngineContext<E::Gui>)
     where
-        G: GuiImplementation + 'static,
-        E: Engine<G> + 'static,
+        E: Engine + 'static,
     {
         context.api.performance.begin_frame();
         let before_future = context.window_renderer_mut().acquire().unwrap();
 
-        // Create secondary command buffer from texture pipeline & send draw commands
-        let mut secondary_builder = AutoCommandBufferBuilder::secondary(
-            context.api.device(),
-            context.api.graphics_queue().family(),
-            CommandBufferUsage::MultipleSubmit,
-            CommandBufferInheritanceInfo {
-                render_pass: Some(context.api.render_pass.viewport_subpass().into()),
-                ..Default::default()
-            },
-        )
-        .unwrap();
-
-        // Create viewport render command
-        engine.render(
-            &mut secondary_builder,
-            context
-                .gui
-                .viewport(context.api.window().scale_factor() as f32),
-        );
-        let viewport_command_buffer = secondary_builder.build().unwrap();
-
         let target = context.window_renderer_mut().swapchain_image_view();
-        let after_render_pass_future = context.api.render_pass.render(
+        let subpass = context.viewport_subpass();
+        let after_render_pass_future = context.render_pass.render(
             before_future,
             &mut context.gui,
+            &mut context.api,
+            subpass,
             target,
-            viewport_command_buffer,
+            engine,
         );
 
         context
@@ -172,14 +152,9 @@ pub struct EngineApi {
     pub context: VulkanoContext,
     pub surface: Arc<Surface<Window>>,
     pub performance: EnginePerformance,
-    render_pass: FinalRenderPass,
 }
 
 impl EngineApi {
-    pub fn viewport_subpass(&self) -> Subpass {
-        self.render_pass.viewport_subpass()
-    }
-
     pub fn device(&self) -> Arc<Device> {
         self.context.device()
     }
@@ -209,6 +184,7 @@ pub struct EngineContext<G> {
     api: EngineApi,
     gui: G,
     windows: VulkanoWindows,
+    render_pass: FinalRenderPass,
 }
 
 impl<G> EngineContext<G>
@@ -267,35 +243,54 @@ where
             context,
             surface,
             performance: Default::default(),
-            render_pass,
         };
 
-        Self { api, gui, windows }
+        Self {
+            api,
+            gui,
+            windows,
+            render_pass,
+        }
+    }
+
+    pub fn viewport_subpass(&self) -> Subpass {
+        self.render_pass.viewport_subpass()
+    }
+
+    pub fn gui(&mut self) -> &mut G {
+        &mut self.gui
+    }
+
+    pub fn api(&self) -> &EngineApi {
+        &self.api
+    }
+
+    pub fn api_mut(&mut self) -> &mut EngineApi {
+        &mut self.api
     }
 
     #[allow(unused)]
-    fn window_renderer(&self) -> &VulkanoWindowRenderer {
+    pub fn window_renderer(&self) -> &VulkanoWindowRenderer {
         self.windows.get_primary_renderer().unwrap()
     }
 
     #[allow(unused)]
-    fn window_renderer_mut(&mut self) -> &mut VulkanoWindowRenderer {
+    pub fn window_renderer_mut(&mut self) -> &mut VulkanoWindowRenderer {
         self.windows.get_primary_renderer_mut().unwrap()
     }
 
-    fn resize(&mut self) {
+    pub fn resize(&mut self) {
         self.window_renderer_mut().resize();
     }
 }
 
 /// An implementation of the engine stages, contains input processing and render information
-pub trait Engine<G>
-where
-    G: GuiImplementation,
-{
+pub trait Engine {
+    type Gui: GuiImplementation;
+
     /// Called right after the vulkano context is created
     #[allow(unused_variables)]
-    fn init(api: &mut EngineApi) -> Self;
+    fn init(context: &mut EngineContext<Self::Gui>) -> Self;
 
     /// Called after initialization
     #[allow(unused_variables)]
@@ -311,14 +306,21 @@ where
 
     /// All the ui code goes here
     #[allow(unused_variables)]
-    fn immediate(&mut self, context: &mut G::Context, api: &mut EngineApi) {}
+    fn immediate(
+        &mut self,
+        context: &mut <<Self as Engine>::Gui as GuiImplementation>::Context,
+        api: &mut EngineApi,
+    ) {
+    }
 
     /// Viewport rendering code goes here
     #[allow(unused_variables)]
     fn render(
         &mut self,
-        builder: &mut AutoCommandBufferBuilder<SecondaryAutoCommandBuffer>,
+        command_buffer: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>,
+        subpass: Subpass,
         viewport: Viewport,
+        api: &mut EngineApi,
     ) {
     }
 }

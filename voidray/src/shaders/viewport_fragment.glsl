@@ -1,6 +1,6 @@
 #version 450
 
-#include <tonemapping.glsl>
+#include "tonemapping.glsl"
 
 layout(location = 0) in vec2 f_uv;
 layout(location = 0) out vec4 f_color;
@@ -61,7 +61,7 @@ void main() {
     color = pow(color, vec3(1.0 / gamma));
 
     if (ppd.transparent) {
-        f_color = vec4(color * sampled.w, 1.0);
+        f_color = vec4(color, sampled.w);
     } else {
         f_color = vec4(color, 1.0);
     }
