@@ -281,25 +281,6 @@ impl Engine for VoidrayEngine {
         //     });
     }
 
-    // fn render(
-    //     &mut self,
-    //     subpass: vulkano::render_pass::Subpass,
-    //     viewport: Viewport,
-    //     api: &mut EngineApi,
-    // ) -> SecondaryAutoCommandBuffer {
-    //     let secondary_builder = AutoCommandBufferBuilder::secondary(
-    //         api.context.device(),
-    //         api.context.graphics_queue().family(),
-    //         CommandBufferUsage::MultipleSubmit,
-    //         CommandBufferInheritanceInfo {
-    //             render_pass: Some(subpass.into()),
-    //             ..Default::default()
-    //         },
-    //     )
-    //     .unwrap();
-    //     secondary_builder.build().unwrap()
-    // }
-
     fn render(
         &mut self,
         command_buffer: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>,
@@ -310,16 +291,6 @@ impl Engine for VoidrayEngine {
         self.pipeline
             .draw(command_buffer, &self.settings.read().unwrap(), viewport);
     }
-
-    // fn render(
-    //     &mut self,
-    //     builder: &mut AutoCommandBufferBuilder<SecondaryAutoCommandBuffer>,
-    //     viewport: Viewport,
-    // ) {
-    //     let samples = self.renderer.sample_count();
-    //     self.pipeline
-    //         .draw(builder, &self.settings.read().unwrap(), viewport);
-    // }
 }
 
 fn main() {
