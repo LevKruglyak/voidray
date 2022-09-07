@@ -115,7 +115,7 @@ impl Engine for VoidrayEngine {
                 ui.add_enabled_ui(!currently_rendering, |ui| {
                     ui.horizontal(|ui| {
                         ui.label("Samples:");
-                        ui.add(egui::Slider::new(&mut settings.samples_per_pixel, 1..=1000));
+                        ui.add(egui::Slider::new(&mut settings.samples_per_pixel, 1..=10_000));
                     });
                     let samples_per_pixel = settings.samples_per_pixel;
                     ui.horizontal(|ui| {
