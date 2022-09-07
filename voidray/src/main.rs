@@ -11,7 +11,11 @@ use std::sync::RwLock;
 use crate::core::scene::Scene;
 use crate::render::RenderTarget;
 
+use egui::CollapsingHeader;
+use egui::Color32;
 use egui::ComboBox;
+use egui::DragValue;
+use egui::ScrollArea;
 use gui::Editable;
 use hatchery::engine::EngineContext;
 use hatchery::{
@@ -24,10 +28,8 @@ use pipeline::ViewportPipeline;
 use simplelog::*;
 use vulkano::command_buffer::PrimaryAutoCommandBuffer;
 use vulkano::render_pass::Subpass;
-use vulkano::{
-    command_buffer::AutoCommandBufferBuilder,
-    pipeline::graphics::viewport::Viewport,
-};
+use vulkano::{command_buffer::AutoCommandBufferBuilder, pipeline::graphics::viewport::Viewport};
+use widgets::FatButton;
 use winit::dpi::LogicalSize;
 
 mod common;
@@ -37,6 +39,7 @@ mod gui;
 mod pipeline;
 mod render;
 mod utils;
+mod widgets;
 
 struct VoidrayEngine {
     pipeline: ViewportPipeline,
@@ -104,136 +107,154 @@ impl Engine for VoidrayEngine {
 
         egui::SidePanel::left("left_panel")
             .min_width(200.0)
+            .resizable(false)
             .show(context, |ui| {
-                ui.heading("Render Settings");
-                ui.separator();
-
                 let currently_rendering = self.renderer.currently_rendering();
                 let mut settings = self.settings.write().unwrap();
-                let mut modified = false;
+                // let mut modified = false;
 
-                ui.add_enabled_ui(!currently_rendering, |ui| {
-                    ui.horizontal(|ui| {
-                        ui.label("Samples:");
-                        ui.add(egui::Slider::new(&mut settings.samples_per_pixel, 1..=10_000));
-                    });
-                    let samples_per_pixel = settings.samples_per_pixel;
-                    ui.horizontal(|ui| {
-                        ui.label("Samples per run:");
-                        ui.add(egui::Slider::new(
-                            &mut settings.samples_per_run,
-                            1..=samples_per_pixel,
-                        ));
-                    });
-                    ui.horizontal(|ui| {
-                        ui.label("Max ray depth:");
-                        ui.add(egui::Slider::new(&mut settings.max_ray_depth, 1..=100));
-                    });
-                });
+                let col_width = 100.0;
 
-                ui.horizontal(|ui| {
-                    ui.label("Render mode:");
-                    ComboBox::from_id_source("render_mode")
-                        .selected_text(format!("{:?}", settings.render_mode))
-                        .show_ui(ui, |ui| {
-                            if ui
-                                .selectable_value(
-                                    &mut settings.render_mode,
-                                    RenderMode::Full,
-                                    "Full",
-                                )
-                                .clicked()
-                            {
-                                modified = true
-                            };
-                            if ui
-                                .selectable_value(
-                                    &mut settings.render_mode,
-                                    RenderMode::Normal,
-                                    "Normal",
-                                )
-                                .clicked()
-                            {
-                                modified = true
-                            };
+                CollapsingHeader::new("Render Settings")
+                    .default_open(true)
+                    .show(ui, |ui| {
+                        ui.add_enabled_ui(!currently_rendering, |ui| {
+                            egui::Grid::new("render_settings")
+                                .num_columns(2)
+                                .spacing([10.0, 4.0])
+                                .max_col_width(col_width)
+                                .min_col_width(col_width)
+                                .striped(true)
+                                .show(ui, |ui| {
+                                    ui.label("Total samples:");
+                                    ui.add(
+                                        DragValue::new(&mut settings.samples_per_pixel).speed(1),
+                                    );
+                                    ui.end_row();
+                                    ui.label("Samples per run:");
+                                    ui.add(DragValue::new(&mut settings.samples_per_run).speed(1));
+                                    ui.end_row();
+                                    ui.label("Max ray depth:");
+                                    ui.add(DragValue::new(&mut settings.max_ray_depth).speed(1));
+                                    ui.end_row();
+                                    ui.label("Render mode:");
+                                    ComboBox::from_id_source("render_mode")
+                                        .selected_text(format!("{:?}", settings.render_mode))
+                                        .show_ui(ui, |ui| {
+                                            ui.selectable_value(
+                                                &mut settings.render_mode,
+                                                RenderMode::Full,
+                                                format!("{:?}", RenderMode::Full),
+                                            );
+                                            ui.selectable_value(
+                                                &mut settings.render_mode,
+                                                RenderMode::Normal,
+                                                format!("{:?}", RenderMode::Normal),
+                                            );
+                                        });
+                                    ui.end_row();
+                                });
                         });
-                });
+                    });
+                ui.add_space(15.0);
 
-                ui.horizontal(|ui| {
-                    ui.label("Tonemap:");
-                    ComboBox::from_id_source("tonemap")
-                        .selected_text(format!("{:?}", settings.tonemap))
-                        .show_ui(ui, |ui| {
-                            ui.selectable_value(
-                                &mut settings.tonemap,
-                                Tonemap::None,
-                                format!("{:?}", Tonemap::None),
-                            );
-                            ui.selectable_value(
-                                &mut settings.tonemap,
-                                Tonemap::SimpleACES,
-                                format!("{:?}", Tonemap::SimpleACES),
-                            );
-                            ui.selectable_value(
-                                &mut settings.tonemap,
-                                Tonemap::SimpleReinhard,
-                                format!("{:?}", Tonemap::SimpleReinhard),
-                            );
-                            ui.selectable_value(
-                                &mut settings.tonemap,
-                                Tonemap::LumaReinhard,
-                                format!("{:?}", Tonemap::LumaReinhard),
-                            );
-                            ui.selectable_value(
-                                &mut settings.tonemap,
-                                Tonemap::LumaWhitePreservingReinhard,
-                                format!("{:?}", Tonemap::LumaWhitePreservingReinhard),
-                            );
-                            ui.selectable_value(
-                                &mut settings.tonemap,
-                                Tonemap::RomBinDaHouse,
-                                format!("{:?}", Tonemap::RomBinDaHouse),
-                            );
-                            ui.selectable_value(
-                                &mut settings.tonemap,
-                                Tonemap::Filmic,
-                                format!("{:?}", Tonemap::Filmic),
-                            );
-                            ui.selectable_value(
-                                &mut settings.tonemap,
-                                Tonemap::Uncharted2,
-                                format!("{:?}", Tonemap::Uncharted2),
-                            );
+                CollapsingHeader::new("Color Management")
+                    .default_open(true)
+                    .show(ui, |ui| {
+                        egui::Grid::new("color_management")
+                            .num_columns(2)
+                            .spacing([10.0, 4.0])
+                            .max_col_width(col_width)
+                            .min_col_width(col_width)
+                            .striped(true)
+                            .show(ui, |ui| {
+                                ui.label("Tone map:");
+                                ComboBox::from_id_source("tonemap")
+                                    .selected_text(format!("{:?}", settings.tonemap))
+                                    .show_ui(ui, |ui| {
+                                        ui.selectable_value(
+                                            &mut settings.tonemap,
+                                            Tonemap::None,
+                                            format!("{:?}", Tonemap::None),
+                                        );
+                                        ui.selectable_value(
+                                            &mut settings.tonemap,
+                                            Tonemap::SimpleACES,
+                                            format!("{:?}", Tonemap::SimpleACES),
+                                        );
+                                        ui.selectable_value(
+                                            &mut settings.tonemap,
+                                            Tonemap::SimpleReinhard,
+                                            format!("{:?}", Tonemap::SimpleReinhard),
+                                        );
+                                        ui.selectable_value(
+                                            &mut settings.tonemap,
+                                            Tonemap::LumaReinhard,
+                                            format!("{:?}", Tonemap::LumaReinhard),
+                                        );
+                                        ui.selectable_value(
+                                            &mut settings.tonemap,
+                                            Tonemap::LumaWhitePreservingReinhard,
+                                            format!("{:?}", Tonemap::LumaWhitePreservingReinhard),
+                                        );
+                                        ui.selectable_value(
+                                            &mut settings.tonemap,
+                                            Tonemap::RomBinDaHouse,
+                                            format!("{:?}", Tonemap::RomBinDaHouse),
+                                        );
+                                        ui.selectable_value(
+                                            &mut settings.tonemap,
+                                            Tonemap::Filmic,
+                                            format!("{:?}", Tonemap::Filmic),
+                                        );
+                                        ui.selectable_value(
+                                            &mut settings.tonemap,
+                                            Tonemap::Uncharted2,
+                                            format!("{:?}", Tonemap::Uncharted2),
+                                        );
+                                    });
+                                ui.end_row();
+                                ui.label("Gamma");
+                                ui.add(DragValue::new(&mut settings.gamma).speed(0.02));
+                                ui.end_row();
+                                ui.label("Exposure:");
+                                ui.add(DragValue::new(&mut settings.exposure).speed(0.02));
+                                ui.end_row();
+                                ui.label("Transparent:");
+                                ui.checkbox(&mut settings.transparent, "");
+                                ui.end_row();
+                            });
+                    });
+                ui.add_space(15.0);
+
+                // if let Ok(mut scene_write) = self.scene.try_write() {
+                //     ui.heading("Camera");
+                //     scene_write.camera.display_ui(ui, &mut false);
+                // }
+
+                egui::Grid::new("render_actions")
+                    .num_columns(2)
+                    .spacing([10.0, 4.0])
+                    .max_col_width(col_width)
+                    .min_col_width(col_width)
+                    .striped(true)
+                    .show(ui, |ui| {
+                        ui.add_enabled_ui(!currently_rendering, |ui| {
+                            ui.horizontal_centered(|ui| {
+                                if ui.add(FatButton::new("Render").width(115.0)).clicked() {
+                                    self.renderer.execute(RenderAction::Start);
+                                }
+                            });
                         });
-                });
-
-                ui.checkbox(&mut settings.transparent, "Transparent");
-                ui.horizontal(|ui| {
-                    ui.label("Gamma:");
-                    ui.add(egui::Slider::new(&mut settings.gamma, 0.0..=5.0));
-                });
-                ui.horizontal(|ui| {
-                    ui.label("Exposure:");
-                    ui.add(egui::Slider::new(&mut settings.exposure, 0.0..=32.0));
-                });
-
-                if let Ok(mut scene_write) = self.scene.try_write() {
-                    ui.heading("Camera");
-                    scene_write.camera.display_ui(ui, &mut false);
-                }
-
-                ui.horizontal(|ui| {
-                    ui.add_enabled_ui(!currently_rendering, |ui| {
-                        if ui.button("Render").clicked() {
-                            self.renderer.execute(RenderAction::Start);
-                        }
+                        ui.add_enabled_ui(currently_rendering, |ui| {
+                            ui.horizontal_centered(|ui| {
+                                if ui.add(FatButton::new("Cancel").width(115.0)).clicked() {
+                                    self.renderer.execute(RenderAction::Cancel);
+                                }
+                            });
+                        });
+                        ui.end_row();
                     });
-                    ui.add_enabled_ui(currently_rendering, |ui| {
-                        if ui.button("Cancel").clicked() {
-                            self.renderer.execute(RenderAction::Cancel);
-                        }
-                    });
-                });
 
                 let samples = self.renderer.sample_count();
                 if currently_rendering {
@@ -245,6 +266,19 @@ impl Engine for VoidrayEngine {
             .min_width(200.0)
             .max_width(200.0)
             .show(context, |ui| {});
+
+        // egui::TopBottomPanel::bottom("bottom_panel")
+        //     .min_height(200.0)
+        //     .show(context, |ui| {
+        //         egui::ScrollArea::vertical()
+        //             .auto_shrink([false, false])
+        //             .stick_to_bottom()
+        //             .show(ui, |ui| {
+        //                 for _ in 0..10 {
+        //                     ui.label("[---] console not yet supported...");
+        //                 }
+        //             });
+        //     });
     }
 
     // fn render(

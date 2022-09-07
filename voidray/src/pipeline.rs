@@ -1,7 +1,6 @@
 use crate::core::tracer::RenderSettings;
 use crate::render::{RenderTarget, RenderTargetView};
 use bytemuck::{Pod, Zeroable};
-use vulkano::pipeline::graphics::color_blend::ColorBlendState;
 use std::fmt::Debug;
 use std::sync::{Arc, RwLock};
 use vulkano::command_buffer::CommandBufferInheritanceInfo;
@@ -10,13 +9,13 @@ use vulkano::descriptor_set::{PersistentDescriptorSet, WriteDescriptorSet};
 use vulkano::device::Device;
 use vulkano::image::ImageViewAbstract;
 use vulkano::impl_vertex;
+use vulkano::pipeline::graphics::color_blend::ColorBlendState;
 use vulkano::pipeline::{Pipeline, PipelineBindPoint};
 use vulkano::sampler::{Filter, Sampler, SamplerAddressMode, SamplerCreateInfo};
 use vulkano::{
     buffer::BufferUsage,
     buffer::{CpuAccessibleBuffer, TypedBufferAccess},
     command_buffer::AutoCommandBufferBuilder,
-    command_buffer::SecondaryAutoCommandBuffer,
     device::Queue,
     pipeline::{
         graphics::{
@@ -253,7 +252,9 @@ impl ViewportPipeline {
             .set_viewport(0, vec![viewport.clone()])
             .draw_indexed(self.index_buffer.len() as u32, 1, 0, 0, 0)
             .unwrap();
-        command_buffer.execute_commands(secondary_builder.build().unwrap()).unwrap();
+        command_buffer
+            .execute_commands(secondary_builder.build().unwrap())
+            .unwrap();
 
         let mut secondary_builder = AutoCommandBufferBuilder::secondary(
             self.device.clone(),
