@@ -1,4 +1,4 @@
 # Voidray
 
 High performance, physically based Rust path tracer.
-<img width="1190" alt="Screen Shot 2022-09-06 at 8 11 44 PM" src="https://user-images.githubusercontent.com/13054020/188765377-aed57809-662c-4a7f-9c99-11125092616f.png">
+<img width="1191" alt="Screen Shot 2022-09-07 at 2 44 02 AM" src="https://user-images.githubusercontent.com/13054020/188807774-d697ed44-50f7-4403-9efc-7235fa5b3613.png">
