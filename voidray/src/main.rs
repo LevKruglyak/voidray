@@ -15,15 +15,11 @@ use egui::CollapsingHeader;
 use egui::ComboBox;
 use egui::DragValue;
 use egui::ProgressBar;
-use hatchery::engine::EngineContext;
-use hatchery::{
-    engine::{Engine, EngineApi, EngineOptions, Hatchery, WindowOptions},
-    gui::egui_implementation::EguiImplementation,
-};
 pub use log::*;
 use pipeline::Tonemap;
 use pipeline::ViewportPipeline;
 use simplelog::*;
+use voidray_launcher::*;
 use vulkano::command_buffer::PrimaryAutoCommandBuffer;
 use vulkano::render_pass::Subpass;
 use vulkano::{command_buffer::AutoCommandBufferBuilder, pipeline::graphics::viewport::Viewport};
@@ -48,7 +44,7 @@ struct VoidrayEngine {
 }
 
 impl Engine for VoidrayEngine {
-    type Gui = EguiImplementation;
+    type Gui = gui_implementation::EguiImplementation;
 
     fn init(context: &mut EngineContext<Self::Gui>) -> Self {
         // Initialize logging
@@ -258,10 +254,6 @@ impl Engine for VoidrayEngine {
                 let time = self.renderer.elapsed_time();
 
                 ui.add_space(5.0);
-                if currently_rendering {
-                    ui.add(ProgressBar::new(samples.0 as f32 / samples.1 as f32).show_percentage());
-                    ui.add_space(5.0);
-                }
                 ui.label(format!("Samples: {}/{}", samples.0, samples.1));
                 ui.label(format!("Elapsed time: {:.4}s", time.as_secs_f32()));
                 if currently_rendering && samples.0 > 0 {
@@ -289,6 +281,18 @@ impl Engine for VoidrayEngine {
         //                 }
         //             });
         //     });
+
+        let currently_rendering = self.renderer.currently_rendering();
+        if currently_rendering {
+            egui::TopBottomPanel::bottom("bottom_panel").show(context, |ui| {
+                let samples = self.renderer.sample_count();
+                ui.add(
+                    ProgressBar::new(samples.0 as f32 / samples.1 as f32)
+                        .show_percentage()
+                        .text("Render progress..."),
+                );
+            });
+        }
     }
 
     fn render(
@@ -312,5 +316,5 @@ fn main() {
         ..EngineOptions::default()
     };
 
-    Hatchery::<VoidrayEngine>::run(options);
+    EngineLauncher::<VoidrayEngine>::run(options);
 }

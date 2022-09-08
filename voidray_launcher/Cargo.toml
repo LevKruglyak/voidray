@@ -1,16 +1,14 @@
 [package]
-name = "hatchery"
+name = "voidray_launcher"
 version = "0.1.0"
 edition = "2021"
 authors = ["Lev Kruglyak <lev.kruglyak2014@gmail.com>"]
-description = "Simple engine library for making graphical Vulkano apps with ui."
+description = "Simple wrapper engine library for making graphical Vulkano apps with ui."
 
 [dependencies]
 # Gui
 egui = { version = "0.18", optional = true }
 egui_winit_vulkano = { version = "0.18", optional = true }
-
-imgui = { version = "0.8", optional = false }
 
 winit = "0.26"
 
@@ -28,5 +26,4 @@ bytemuck = { version = "1.7", features = ["derive", "extern_crate_std", "min_con
 
 [features]
 egui = ["dep:egui", "dep:egui_winit_vulkano"]
-imgui = []
 default = ["egui"]

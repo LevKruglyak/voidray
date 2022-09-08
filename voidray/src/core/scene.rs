@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
 use crate::{
-    common::{materials::Materials, objects::Shapes},
+    common::{environments::Environments, materials::Materials, objects::Shapes},
     utils::color::{Color, Colors},
 };
 
 use super::{
     camera::{Camera, RayOrigin},
-    environment::{Environment, HDRIEnvironment},
+    environment::Environment,
     material::Material,
     mesh::Mesh,
     object::{Object, Shape},
@@ -72,11 +72,13 @@ impl Default for Scene {
             objects: Vec::new(),
             shapes: Vec::new(),
             meshes: Vec::new(),
-            environment: Arc::new(HDRIEnvironment::new("voidray/assets/studio.exr")),
+            environment: Environments::uniform(Colors::black()),
         };
 
+        scene.environment = Environments::hdri("voidray/assets/studio.exr");
+
         scene.camera = Camera {
-            eye: Vec3::new(0.4, 0.6, 3.0),
+            eye: Vec3::new(0.0, 0.6, 3.0),
             direction: Vec3::new(0.0, -0.1, 1.0),
             up: Vec3::new(0.0, 1.0, 0.0),
             fov: 70.0,
@@ -93,7 +95,7 @@ impl Default for Scene {
         let green = Materials::colored_emissive(&mut scene, Colors::blue(), 100.0);
 
         let red_shape = Shapes::sphere(&mut scene, Vec3::new(1.3, 0.5, 0.0), 0.25);
-        let gold_shape = Shapes::sphere(&mut scene, Vec3::new(-0.3, 0.20, 1.5), 0.20);
+        let gold_shape = Shapes::sphere(&mut scene, Vec3::new(0.0, 0.20, 0.5), 0.20);
         let green_shape = Shapes::sphere(&mut scene, Vec3::new(-2.0, 3.0, 0.0), 0.5);
         //
         let material_main = scene.add_mesh(Arc::new(Mesh::from_file(
@@ -106,12 +108,12 @@ impl Default for Scene {
         // let cube_shape = scene.add_mesh(Arc::new(Mesh::from_file("voidray/assets/fancy_monkey.obj")));
 
         scene.add_object(ground_mat, ground_shape);
-        scene.add_object(red, red_shape);
-        // scene.add_object(gold, gold_shape);
+        // scene.add_object(red, red_shape);
+        scene.add_object(gold, gold_shape);
         // scene.add_object(green, green_shape);
         // scene.add_object(ball1_mat, cube_shape);
-        scene.add_object(ball1_mat, material_main);
-        scene.add_object(stand_mat, material_stand);
+        // scene.add_object(gold, material_main);
+        // scene.add_object(stand_mat, material_stand);
 
         // let ground_mat = Materials::diffuse_glossy(&mut scene, Color::new(0.01, 0.01, 0.01), 0.1, 0.1);
         //

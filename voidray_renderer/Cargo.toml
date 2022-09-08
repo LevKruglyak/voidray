@@ -1,32 +1,23 @@
 [package]
-name = "voidray"
-description = ""
+name = "voidray_renderer"
+description = "The core of the Voidray rendering engine. Can be run independently from any windowed application."
 version = "0.1.0"
 edition = "2021"
 # license-file = "LICENSE.md"
 authors = ["Lev Kruglyak <lev.kruglyak2014@gmail.com>"]
 
 [dependencies]
-# Gui
-egui = "0.18"
-egui_winit_vulkano = "0.18"
-winit = "0.26"
-
 # Vulkano dependencies
 vulkano = "0.30"
 vulkano-util = "0.30"
-vulkano-win = "0.30"
 vulkano-shaders = "0.30"
 
 # Utils
 lazy_static = "1.4"
 rand = "0.8"
+rand_distr = "0.4.3"
 bytemuck = { version = "1.7", features = ["derive", "extern_crate_std", "min_const_generics"] }
 derive-new = "0.5"
-
-# Log
-simplelog = "0.12"
-log = "0.4"
 
 # Concurrency
 crossbeam = "0.8"
@@ -38,8 +29,6 @@ cgmath = "0.18.0"
 # IO
 exr = "1.4.2"
 obj-rs = "0.7"
-
-voidray_launcher = { path = "../voidray_launcher", features = ["egui"] }
 
 [features]
 high_precision = []

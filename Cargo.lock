@@ -204,12 +204,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "chlorine"
-version = "1.0.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75476fe966a8af7c0ceae2a3e514afa87d4451741fcdfab8bfaa07ad301842ec"
-
-[[package]]
 name = "chrono"
 version = "0.4.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -559,28 +553,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "egui_demo_lib"
-version = "0.18.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c90fd27c1b563117b50ffde51587f364c517ff89a80e11bb96edacf43a38d4cb"
-dependencies = [
- "egui",
- "egui_extras",
- "enum-map",
- "tracing",
- "unicode_names2",
-]
-
-[[package]]
-name = "egui_extras"
-version = "0.18.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "877bfcce06463cdbcfd7f4efd57608b1384d6d9ae03b33e503fbba1d1a899a52"
-dependencies = [
- "egui",
-]
-
-[[package]]
 name = "egui_winit_vulkano"
 version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -607,27 +579,6 @@ name = "emath"
 version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c223f58c7e38abe1770f367b969f1b3fbd4704b67666bcb65dbb1adb0980ba72"
-
-[[package]]
-name = "enum-map"
-version = "2.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f5a56d54c8dd9b3ad34752ed197a4eb2a6601bc010808eb097a04a58ae4c43e1"
-dependencies = [
- "enum-map-derive",
- "serde",
-]
-
-[[package]]
-name = "enum-map-derive"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9045e2676cd5af83c3b167d917b0a5c90a4d8e266e2683d6631b235c457fc27"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
 
 [[package]]
 name = "epaint"
@@ -770,24 +721,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
 
 [[package]]
-name = "hatchery"
-version = "0.1.0"
-dependencies = [
- "bytemuck",
- "egui",
- "egui_winit_vulkano",
- "imgui",
- "lazy_static",
- "rand",
- "systemstat",
- "vulkano",
- "vulkano-shaders",
- "vulkano-util",
- "vulkano-win",
- "winit",
-]
-
-[[package]]
 name = "heck"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -836,27 +769,6 @@ dependencies = [
  "png",
  "scoped_threadpool",
  "tiff",
-]
-
-[[package]]
-name = "imgui"
-version = "0.8.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e6a33933d4645d6db1bfa55ff75e13ef301644d4c001cfaec6fe3afcfb05b82c"
-dependencies = [
- "bitflags",
- "imgui-sys",
- "parking_lot 0.11.2",
-]
-
-[[package]]
-name = "imgui-sys"
-version = "0.8.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "286f5338bd8281e3203de29cc317d123b178f2e565eca5aee770a2048074fdf7"
-dependencies = [
- "cc",
- "chlorine",
 ]
 
 [[package]]
@@ -952,6 +864,12 @@ dependencies = [
  "cfg-if 1.0.0",
  "winapi",
 ]
+
+[[package]]
+name = "libm"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "292a948cd991e376cf75541fe5b97a1081d713c618b4f1b9500f8844e49eb565"
 
 [[package]]
 name = "lock_api"
@@ -1238,6 +1156,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "578ede34cf02f8924ab9447f50c28075b4d3e5b269972345e7e0372b38c6cdcd"
 dependencies = [
  "autocfg",
+ "libm",
 ]
 
 [[package]]
@@ -1504,6 +1423,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d34f1408f55294453790c48b2f1ebbb1c5b4b7563eb1f418bcfcfdbb06ebb4e7"
 dependencies = [
  "getrandom",
+]
+
+[[package]]
+name = "rand_distr"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32cb0b9bc82b0a0876c2dd994a7e7a2683d3e7390ca40e6886785ef0c7e3ee31"
+dependencies = [
+ "num-traits",
+ "rand",
 ]
 
 [[package]]
@@ -1902,12 +1831,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "unicode_names2"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eec8e807a365e5c972debc47b8f06d361b37b94cfd18d48f7adc715fb86404dd"
-
-[[package]]
 name = "url"
 version = "2.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1943,22 +1866,64 @@ dependencies = [
  "crossbeam",
  "derive-new",
  "egui",
- "egui_demo_lib",
  "egui_winit_vulkano",
  "exr",
- "hatchery",
- "imgui",
  "lazy_static",
  "log",
  "obj-rs",
  "rand",
  "rayon",
  "simplelog",
+ "voidray_launcher",
  "vulkano",
  "vulkano-shaders",
  "vulkano-util",
  "vulkano-win",
  "winit",
+]
+
+[[package]]
+name = "voidray_common"
+version = "0.1.0"
+dependencies = [
+ "exr",
+ "voidray_renderer",
+]
+
+[[package]]
+name = "voidray_launcher"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "egui",
+ "egui_winit_vulkano",
+ "lazy_static",
+ "rand",
+ "systemstat",
+ "vulkano",
+ "vulkano-shaders",
+ "vulkano-util",
+ "vulkano-win",
+ "winit",
+]
+
+[[package]]
+name = "voidray_renderer"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "cgmath",
+ "crossbeam",
+ "derive-new",
+ "exr",
+ "lazy_static",
+ "obj-rs",
+ "rand",
+ "rand_distr",
+ "rayon",
+ "vulkano",
+ "vulkano-shaders",
+ "vulkano-util",
 ]
 
 [[package]]

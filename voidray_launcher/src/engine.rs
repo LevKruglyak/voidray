@@ -33,7 +33,7 @@ pub struct WindowOptions {
 impl Default for WindowOptions {
     fn default() -> Self {
         Self {
-            title: "Hatchery engine",
+            title: "Voidray Engine",
             dimensions: LogicalSize::new(1920, 1080),
         }
     }
@@ -63,11 +63,11 @@ impl Default for EngineOptions {
 }
 
 /// Wrapper struct for engine methods
-pub struct Hatchery<E> {
+pub struct EngineLauncher<E> {
     _pd: std::marker::PhantomData<E>,
 }
 
-impl<E> Hatchery<E>
+impl<E> EngineLauncher<E>
 where
     E: Engine + 'static,
 {
@@ -109,7 +109,7 @@ where
                         engine.immediate(ctx, &mut context.api);
                     });
 
-                    Hatchery::render(&mut engine, &mut context);
+                    EngineLauncher::render(&mut engine, &mut context);
                 }
                 Event::MainEventsCleared => {
                     context.api.surface.window().request_redraw();
@@ -266,12 +266,10 @@ where
         &mut self.api
     }
 
-    #[allow(unused)]
     pub fn window_renderer(&self) -> &VulkanoWindowRenderer {
         self.windows.get_primary_renderer().unwrap()
     }
 
-    #[allow(unused)]
     pub fn window_renderer_mut(&mut self) -> &mut VulkanoWindowRenderer {
         self.windows.get_primary_renderer_mut().unwrap()
     }
@@ -286,23 +284,18 @@ pub trait Engine {
     type Gui: GuiImplementation;
 
     /// Called right after the vulkano context is created
-    #[allow(unused_variables)]
     fn init(context: &mut EngineContext<Self::Gui>) -> Self;
 
     /// Called after initialization
-    #[allow(unused_variables)]
     fn start(&mut self, api: &mut EngineApi) {}
 
     /// Called before a close is requested
-    #[allow(unused_variables)]
     fn stop(&mut self, api: &mut EngineApi) {}
 
     /// Called any time a winit event occurs within the viewport
-    #[allow(unused_variables)]
     fn on_winit_event(&mut self, event: &WindowEvent, api: &mut EngineApi) {}
 
     /// All the ui code goes here
-    #[allow(unused_variables)]
     fn immediate(
         &mut self,
         context: &mut <<Self as Engine>::Gui as GuiImplementation>::Context,
@@ -311,7 +304,6 @@ pub trait Engine {
     }
 
     /// Viewport rendering code goes here
-    #[allow(unused_variables)]
     fn render(
         &mut self,
         command_buffer: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>,

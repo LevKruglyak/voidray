@@ -38,7 +38,7 @@ impl Default for RenderSettings {
             max_ray_depth: 10,
             render_mode: RenderMode::Full,
             tonemap: Tonemap::None,
-            transparent: false,
+            transparent: true,
             gamma: 2.2,
             exposure: 1.0,
         }
@@ -54,6 +54,8 @@ pub fn trace_ray(
     let ray = scene.ray_origin.cast_ray(u, v);
     trace_ray_internal(scene, settings, &ray, 0)
 }
+
+static T_MIN: Float = 0.000001;
 
 fn trace_ray_internal(
     scene: &SceneAcceleration,
@@ -72,8 +74,8 @@ fn trace_ray_internal(
     for object in &scene.objects {
         let shape = scene.shape_ref(object.shape);
         if let Some(hit) = match shape {
-            Shape::Analytic(hittable) => hittable.hit(ray, 0.000001, closest_so_far),
-            Shape::Mesh(handle) => scene.mesh_ref(*handle).hit(ray, 0.000001, closest_so_far),
+            Shape::Analytic(hittable) => hittable.hit(ray, T_MIN, closest_so_far),
+            Shape::Mesh(handle) => scene.mesh_ref(*handle).hit(ray, T_MIN, closest_so_far),
         } {
             closest_so_far = hit.t;
             result = Some((hit, object));

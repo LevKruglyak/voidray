@@ -88,7 +88,7 @@ impl Renderer {
                         target_write.clear();
 
                         *thread_sample_count.write().unwrap() = (0, settings.samples_per_pixel);
-                        target_write.samples = (0, settings.samples_per_pixel);
+                        target_write.samples = (1, settings.samples_per_pixel);
 
                         target_write.dimensions
                     };
@@ -160,7 +160,7 @@ impl Renderer {
                             );
 
                             *thread_sample_count.write().unwrap() = target_write.samples;
-                            target_write.samples = (samples, settings.samples_per_pixel);
+                            target_write.samples = (samples + 1, settings.samples_per_pixel);
                             target_write.synced = false;
                         }
 
@@ -169,14 +169,6 @@ impl Renderer {
                         }
 
                         thread::sleep(Duration::from_millis(1));
-                    }
-
-                    {
-                        let mut target_write = target.write().unwrap();
-                        *thread_sample_count.write().unwrap() = target_write.samples;
-                        target_write.samples =
-                            (settings.samples_per_pixel, settings.samples_per_pixel);
-                        target_write.synced = false;
                     }
 
                     {
@@ -326,7 +318,7 @@ impl RenderTarget {
     }
 
     pub fn scale(&self) -> f32 {
-        self.samples.1 as f32 / self.samples.0 as f32
+        self.samples.1 as f32 / (self.samples.0.saturating_sub(1)) as f32
     }
 
     pub fn clear(&mut self) {
