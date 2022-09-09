@@ -1,5 +1,5 @@
 use crate::vector::*;
-use std::ops::{Add, AddAssign, Mul};
+use std::ops::{Add, AddAssign, Mul, MulAssign};
 
 pub const BLACK: Color = Color(vec3!(0.0));
 
@@ -38,6 +38,22 @@ impl Color {
     pub fn mean(&self) -> Float {
         (self.0.x + self.0.y + self.0.z) / 3.0
     }
+
+    pub fn r(&self) -> Float {
+        self.0.x
+    }
+
+    pub fn g(&self) -> Float {
+        self.0.y
+    }
+
+    pub fn b(&self) -> Float {
+        self.0.z
+    }
+
+    pub fn a(&self) -> Float {
+        1.0
+    }
 }
 
 impl Add for Color {
@@ -67,5 +83,11 @@ impl Mul<f32> for Color {
 
     fn mul(self, rhs: f32) -> Self::Output {
         Color(self.0 * rhs)
+    }
+}
+
+impl MulAssign<f32> for Color {
+    fn mul_assign(&mut self, rhs: f32) {
+        self.0.mul_assign(rhs);
     }
 }

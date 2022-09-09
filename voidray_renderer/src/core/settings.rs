@@ -2,7 +2,7 @@ use crate::preamble::*;
 
 #[derive(Default, Clone)]
 pub struct Settings {
-    render: RenderSettings,
+    pub render: RenderSettings,
 }
 
 #[derive(Clone, PartialEq)]

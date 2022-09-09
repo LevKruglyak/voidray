@@ -67,7 +67,43 @@ pub struct SceneAcceleration {
 //         result = Some((hit, object));
 //     }
 // }
-impl Scene {}
+impl Scene {
+    pub fn empty() -> Self {
+        Self {
+            camera: Camera::look_at(
+                vec3!(1.0, 0.0, 10.0),
+                vec3!(0.0),
+                vec3!(0.0, 1.0, 0.0),
+                PI / 6.0,
+            ),
+            materials: Vec::new(),
+            objects: Vec::new(),
+            surfaces: Vec::new(),
+            environment: None,
+        }
+    }
+
+    pub fn add_material(&mut self, material: Arc<dyn Material>) -> MaterialHandle {
+        self.materials.push(Named { object: material, name: format!("material_{}", self.materials.len())});
+        MaterialHandle(self.materials.len() - 1)
+    }
+
+    pub fn add_analytic_surface(&mut self, analytic: Arc<dyn AnalyticSurface>) -> SurfaceHandle {
+        self.surfaces.push(Named { object: Surface::Analytic(analytic), name: format!("surface_{}", self.surfaces.len()) });
+        SurfaceHandle(self.surfaces.len() - 1)
+    }
+
+    // pub fn add_mesh(&mut self, mesh: Arc<Mesh>) -> ShapeHandle {
+    //     self.meshes.push(mesh);
+    //     self.shapes.push(Shape::Mesh(self.meshes.len() - 1));
+    //     self.shapes.len() - 1
+    // }
+
+    pub fn add_object(&mut self, material: MaterialHandle, surface: SurfaceHandle) -> ObjectHandle {
+        self.objects.push(Named { object: Object { surface, material, }, name: format!("object_{}", self.objects.len())});
+        ObjectHandle(self.objects.len() - 1)
+    }
+}
 
 impl Accelerable<SceneAcceleration> for Scene {
     fn build_acceleration(&self) -> SceneAcceleration {
@@ -108,22 +144,5 @@ impl SceneAcceleration {
 
     pub fn material_ref(&self, material_handle: MaterialHandle) -> &dyn Material {
         self.materials[material_handle.0].as_ref()
-    }
-}
-
-impl Default for Scene {
-    fn default() -> Self {
-        Self {
-            camera: Camera::look_at(
-                vec3!(0.0, 4.0, 10.0),
-                vec3!(0.0),
-                vec3!(0.0, 1.0, 0.0),
-                PI / 6.0,
-            ),
-            materials: Vec::new(),
-            objects: Vec::new(),
-            surfaces: Vec::new(),
-            environment: None,
-        }
     }
 }

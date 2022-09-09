@@ -9,4 +9,5 @@ members = [
 ]
 
 [profile.release]
+# lto = "fat"
 incremental = true

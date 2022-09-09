@@ -3,17 +3,16 @@ use voidray_renderer::math::to_spherical_coords;
 use voidray_renderer::preamble::*;
 use voidray_renderer::ray::*;
 use voidray_renderer::traits::Environment;
-use voidray_renderer::vector::*;
 
 pub struct Environments {}
 
 impl Environments {
-    pub fn uniform(background: Color) -> Arc<dyn Environment> {
-        Arc::new(UniformEnvironment::new(background))
+    pub fn uniform(background: Color) -> Option<Arc<dyn Environment>> {
+        Some(Arc::new(UniformEnvironment::new(background)))
     }
 
-    pub fn hdri(path: &str) -> Arc<dyn Environment> {
-        Arc::new(HDRIEnvironment::new(path))
+    pub fn hdri(path: &str) -> Option<Arc<dyn Environment>> {
+        Some(Arc::new(HDRIEnvironment::new(path)))
     }
 }
 

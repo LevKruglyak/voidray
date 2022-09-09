@@ -22,34 +22,33 @@ fn trace_ray_internal(
     depth: u32,
     rng: &mut ThreadRng,
 ) -> Color {
-    match scene.hit(ray) {
-        None => match scene.environment.as_ref() {
-            None => BLACK,
-            Some(environment) => environment.sample(ray),
-        },
-        Some((hit, object)) => {
-            let world_pos = ray.at(hit.t);
-            let material = scene.material_ref(object.material);
-            let to_viewer = -ray.direction.normalize();
+    let mut color = BLACK; // emittance component
+                               //
+    if depth < settings.max_bounces {
+        match scene.hit(ray) {
+            None => match scene.environment.as_ref() {
+                None => return BLACK,
+                Some(environment) => return environment.sample(ray),
+            },
+            Some((hit, object)) => {
+                let world_pos = ray.at(hit.t);
+                let material = scene.material_ref(object.material);
+                let to_viewer = -ray.direction.normalize();
 
-            let mut color = BLACK; // emittance component
-                                   // light sampling
-
-            if depth < settings.max_bounces {
                 if let Some((to_incident, pdf)) = material.sample(hit.normal, to_viewer, rng) {
-                    let bsdf = material.bsdf(hit.normal, to_viewer, to_incident);
+                    if pdf.is_normal() {
+                        let bsdf = material.bsdf(hit.normal, to_viewer, to_incident);
 
-                    let ray = Ray::new(world_pos, to_incident);
-                    let indirect = (bsdf
-                        * trace_ray_internal(scene, settings, &ray, depth + 1, rng))
-                        * to_incident.dot(hit.normal).abs()
-                        * (1.0 / pdf);
+                        let ray = Ray::new(world_pos, to_incident);
+                        let next_indirect = trace_ray_internal(scene, settings, &ray, depth + 1, rng);
+                        let indirect = (bsdf * next_indirect * to_incident.dot(hit.normal).abs()) * (1.0 / pdf);
 
-                    color += indirect.clamp(settings.firefly_clamp);
+                        color += indirect.clamp(settings.firefly_clamp);
+                    }
                 }
             }
-
-            color
         }
     }
+
+    color
 }

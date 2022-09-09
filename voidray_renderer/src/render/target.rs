@@ -1,4 +1,4 @@
-use std::sync::RwLock;
+use std::sync::{RwLock, RwLockWriteGuard};
 
 use crate::preamble::*;
 use vulkano::{
@@ -43,7 +43,7 @@ impl CpuBufferImage {
         }
     }
 
-    fn as_slice_mut(
+    pub fn as_slice_mut(
         &mut self,
     ) -> WriteLock<[Float], PotentialDedicatedAllocation<StdMemoryPoolAlloc>> {
         self.buffer.write().unwrap()
@@ -69,6 +69,10 @@ impl ViewImage {
             image: image.clone(),
             view: ImageView::new_default(image).unwrap(),
         }
+    }
+
+    pub fn view(&self) -> Arc<ImageView<AttachmentImage>> {
+        self.view.clone()
     }
 }
 
@@ -118,6 +122,10 @@ impl CpuRenderTarget {
             synced: false,
             dimensions,
         }))
+    }
+
+    pub fn dimensions(&self) -> [u32; 2] {
+        self.dimensions
     }
 
     /// Resizes the render target
@@ -174,6 +182,7 @@ impl CpuRenderTarget {
                 .unwrap();
 
             future.wait(None).unwrap();
+
             self.synced = false;
         }
     }
@@ -208,16 +217,21 @@ impl CpuRenderTarget {
         }
     }
 
-    pub fn buffer(&self) -> Arc<RwLock<CpuBufferImage>> {
-        self.buffer.clone()
+    pub fn buffer(&self) -> RwLockWriteGuard<'_, CpuBufferImage> {
+        self.buffer.write().unwrap()
     }
 
     /// Returns the image view, copying if out of sync
-    pub fn view(&mut self) -> Arc<RwLock<ViewImage>> {
+    pub fn view(&mut self) -> Arc<ImageView<AttachmentImage>> {
         if !self.synced {
             self.try_pull();
         }
 
-        self.view.clone()
+        self.view.read().unwrap().view()
+    }
+
+    pub fn clear(&mut self) {
+        self.buffer().as_slice_mut().iter_mut().for_each(|x| *x = 0.0);
+        self.try_push();
     }
 }

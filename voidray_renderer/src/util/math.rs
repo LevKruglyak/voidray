@@ -43,7 +43,7 @@ pub fn lerp<T>(a: T, b: T, t: Float) -> T
 where
     T: Add<Output = T> + Mul<Float, Output = T>,
 {
-    a * (1.0 - t) + b
+    a * (1.0 - t) + b * t
 }
 
 /// Returns a coordinate transformation which maps vectors in the normal coordinate system to the

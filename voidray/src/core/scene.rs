@@ -109,10 +109,10 @@ impl Default for Scene {
 
         scene.add_object(ground_mat, ground_shape);
         // scene.add_object(red, red_shape);
-        scene.add_object(gold, gold_shape);
+        // scene.add_object(gold, gold_shape);
         // scene.add_object(green, green_shape);
         // scene.add_object(ball1_mat, cube_shape);
-        // scene.add_object(gold, material_main);
+        // scene.add_object(ball1_mat, material_main);
         // scene.add_object(stand_mat, material_stand);
 
         // let ground_mat = Materials::diffuse_glossy(&mut scene, Color::new(0.01, 0.01, 0.01), 0.1, 0.1);

@@ -285,7 +285,7 @@ impl Material for MicrofacetBSDF {
         };
         p += if !self.transparent {
             // Diffuse component
-            (1.0 - f) * wi.dot(n).max(0.0) * 1.0 / PI
+            (1.0 - f) * wi.dot(n).max(0.0) / PI
         } else if wo.dot(n).is_sign_positive() != wi.dot(n).is_sign_positive() {
             // Transmitted component
             let h = (wi * eta_t + wo).normalize();
@@ -297,6 +297,11 @@ impl Material for MicrofacetBSDF {
         } else {
             0.0
         };
-        Some((wi, p))
+
+        if p == 0.0 {
+            None
+        } else {
+            Some((wi, p))
+        }
     }
 }
