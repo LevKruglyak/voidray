@@ -2,11 +2,11 @@
 
 members = [
     "voidray",
+    "voidray_app",
     "voidray_launcher",
     "voidray_renderer",
     "voidray_common",
 ]
 
 [profile.release]
-debug = 1
 incremental = true

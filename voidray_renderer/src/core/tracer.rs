@@ -3,28 +3,16 @@ use crate::color::*;
 use crate::preamble::*;
 use crate::rand::*;
 use crate::ray::*;
+use crate::settings::RenderSettings;
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum RenderMode {
-    Normal,
-    Full,
-}
-
-#[derive(Debug, Clone)]
-pub struct RenderSettings {
-    pub render_mode: RenderMode,
-    pub firefly_clamp: Float,
-    pub max_bounces: u32,
-}
-
-impl Default for RenderSettings {
-    fn default() -> Self {
-        Self {
-            render_mode: RenderMode::Full,
-            firefly_clamp: 3.0,
-            max_bounces: 10,
-        }
-    }
+pub fn trace_ray(
+    scene: &SceneAcceleration,
+    settings: &RenderSettings,
+    x: Float,
+    y: Float,
+    rng: &mut ThreadRng,
+) -> Color {
+    trace_ray_internal(scene, settings, &scene.camera.cast_ray(x, y, rng), 0, rng)
 }
 
 fn trace_ray_internal(
@@ -64,14 +52,4 @@ fn trace_ray_internal(
             color
         }
     }
-}
-
-pub fn trace_ray(
-    scene: &SceneAcceleration,
-    settings: &RenderSettings,
-    x: Float,
-    y: Float,
-    rng: &mut ThreadRng,
-) -> Color {
-    trace_ray_internal(scene, settings, &scene.camera.cast_ray(x, y, rng), 0, rng)
 }

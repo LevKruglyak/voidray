@@ -1,8 +1,10 @@
 #![allow(dead_code, unused, unused_variables)]
 
 mod core;
+mod render;
 mod util;
 
+pub use crate::core::settings;
 pub use crate::core::traits;
 
 pub use util::ray;

@@ -13,6 +13,8 @@ pub use engine::EngineLauncher;
 pub use engine::EngineOptions;
 pub use engine::WindowOptions;
 
+pub use winit::dpi::LogicalSize;
+
 #[cfg(feature = "egui")]
 pub mod gui_implementation {
     pub use crate::gui::egui_implementation::EguiImplementation;
