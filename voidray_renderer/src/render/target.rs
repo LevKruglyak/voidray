@@ -1,17 +1,17 @@
 use std::sync::RwLock;
 
 use crate::preamble::*;
-use rayon::slice::ParallelSliceMut;
 use vulkano::{
     buffer::{cpu_access::WriteLock, BufferUsage, CpuAccessibleBuffer},
-    command_buffer::{AutoCommandBufferBuilder, CommandBufferUsage, CopyBufferToImageInfo, CopyImageInfo},
+    command_buffer::{
+        AutoCommandBufferBuilder, CommandBufferUsage, CopyBufferToImageInfo, CopyImageInfo,
+    },
     device::{Device, Queue},
     format::Format,
     image::{view::ImageView, AttachmentImage, ImageUsage},
     memory::pool::{PotentialDedicatedAllocation, StdMemoryPoolAlloc},
     sync::{self, GpuFuture},
 };
-use vulkano_util::context::VulkanoContext;
 
 #[derive(Default)]
 pub struct CpuBufferImageStats {
@@ -56,11 +56,7 @@ pub struct ViewImage {
 }
 
 impl ViewImage {
-    pub fn new(
-        device: Arc<Device>,
-        usage: ImageUsage,
-        dimensions: [u32; 2],
-    ) -> Self {
+    pub fn new(device: Arc<Device>, usage: ImageUsage, dimensions: [u32; 2]) -> Self {
         let image = AttachmentImage::with_usage(
             device,
             [dimensions[0] as u32, dimensions[1] as u32],
@@ -78,7 +74,6 @@ impl ViewImage {
 
 #[derive(Clone)]
 pub struct CpuRenderTarget {
-    device: Arc<Device>,
     queue: Arc<Queue>,
     buffer: Arc<RwLock<CpuBufferImage>>,
     intermediate: Arc<RwLock<ViewImage>>,
@@ -88,11 +83,11 @@ pub struct CpuRenderTarget {
 }
 
 impl CpuRenderTarget {
-    pub fn new(context: &VulkanoContext, dimensions: [u32; 2]) -> Arc<RwLock<Self>> {
-        let buffer = CpuBufferImage::new(context.device(), dimensions);
+    pub fn new(queue: Arc<Queue>, dimensions: [u32; 2]) -> Arc<RwLock<Self>> {
+        let buffer = CpuBufferImage::new(queue.device().clone(), dimensions);
 
         let intermediate = ViewImage::new(
-            context.device(),
+            queue.device().clone(),
             ImageUsage {
                 transfer_src: true,
                 transfer_dst: true,
@@ -103,7 +98,7 @@ impl CpuRenderTarget {
         );
 
         let view = ViewImage::new(
-            context.device(),
+            queue.device().clone(),
             ImageUsage {
                 transfer_src: false,
                 transfer_dst: true,
@@ -113,9 +108,10 @@ impl CpuRenderTarget {
             dimensions,
         );
 
+        println!("created render target of dimensions {:?}", dimensions);
+
         Arc::new(RwLock::new(Self {
-            device: context.device(),
-            queue: context.compute_queue(),
+            queue,
             buffer: Arc::new(RwLock::new(buffer)),
             intermediate: Arc::new(RwLock::new(intermediate)),
             view: Arc::new(RwLock::new(view)),
@@ -129,9 +125,9 @@ impl CpuRenderTarget {
     pub fn resize(&mut self, new_dimensions: [u32; 2]) {
         self.dimensions = new_dimensions;
 
-        *self.buffer.write().unwrap() = CpuBufferImage::new(self.device.clone(), new_dimensions);
+        *self.buffer.write().unwrap() = CpuBufferImage::new(self.queue.device().clone(), new_dimensions);
         *self.intermediate.write().unwrap() = ViewImage::new(
-            self.device.clone(),
+            self.queue.device().clone(),
             ImageUsage {
                 transfer_src: true,
                 transfer_dst: true,
@@ -141,7 +137,7 @@ impl CpuRenderTarget {
             new_dimensions,
         );
         *self.view.write().unwrap() = ViewImage::new(
-            self.device.clone(),
+            self.queue.device().clone(),
             ImageUsage {
                 transfer_src: false,
                 transfer_dst: true,
@@ -150,7 +146,6 @@ impl CpuRenderTarget {
             },
             new_dimensions,
         );
-
     }
 
     /// Assuming we can block on the buffer, try to copy it to the intermediate view
@@ -158,19 +153,21 @@ impl CpuRenderTarget {
         let buffer_read = self.buffer.read().unwrap();
         if let Ok(intermediate_write) = self.intermediate.try_write() {
             let mut builder = AutoCommandBufferBuilder::primary(
-                self.device.clone(),
+                self.queue.device().clone(),
                 self.queue.family(),
                 CommandBufferUsage::OneTimeSubmit,
             )
             .unwrap();
 
-            builder.copy_buffer_to_image(CopyBufferToImageInfo::buffer_image(
-                buffer_read.buffer.clone(),
-                intermediate_write.image.clone(),
-            ));
+            builder
+                .copy_buffer_to_image(CopyBufferToImageInfo::buffer_image(
+                    buffer_read.buffer.clone(),
+                    intermediate_write.image.clone(),
+                ))
+                .unwrap();
             let command_buffer = builder.build().unwrap();
 
-            let future = sync::now(self.device.clone())
+            let future = sync::now(self.queue.device().clone())
                 .then_execute(self.queue.clone(), command_buffer)
                 .unwrap()
                 .then_signal_fence_and_flush()
@@ -186,19 +183,21 @@ impl CpuRenderTarget {
         let view_write = self.view.read().unwrap();
         if let Ok(intermediate_read) = self.intermediate.try_read() {
             let mut builder = AutoCommandBufferBuilder::primary(
-                self.device.clone(),
+                self.queue.device().clone(),
                 self.queue.family(),
                 CommandBufferUsage::OneTimeSubmit,
             )
             .unwrap();
 
-            builder.copy_image(CopyImageInfo::images(
-                intermediate_read.image.clone(),
-                view_write.image.clone(),
-            ));
+            builder
+                .copy_image(CopyImageInfo::images(
+                    intermediate_read.image.clone(),
+                    view_write.image.clone(),
+                ))
+                .unwrap();
             let command_buffer = builder.build().unwrap();
 
-            let future = sync::now(self.device.clone())
+            let future = sync::now(self.queue.device().clone())
                 .then_execute(self.queue.clone(), command_buffer)
                 .unwrap()
                 .then_signal_fence_and_flush()

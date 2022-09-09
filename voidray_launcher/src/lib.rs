@@ -1,4 +1,4 @@
-#![allow(unused_variables, unused, dead_code)]
+#![allow(unused_variables, dead_code)]
 
 mod gui;
 
@@ -12,6 +12,7 @@ pub use engine::EngineContext;
 pub use engine::EngineLauncher;
 pub use engine::EngineOptions;
 pub use engine::WindowOptions;
+pub use gui::GuiImplementation;
 
 pub use winit::dpi::LogicalSize;
 
