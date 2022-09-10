@@ -84,12 +84,18 @@ impl Scene {
     }
 
     pub fn add_material(&mut self, material: Arc<dyn Material>) -> MaterialHandle {
-        self.materials.push(Named { object: material, name: format!("material_{}", self.materials.len())});
+        self.materials.push(Named {
+            object: material,
+            name: format!("material_{}", self.materials.len()),
+        });
         MaterialHandle(self.materials.len() - 1)
     }
 
     pub fn add_analytic_surface(&mut self, analytic: Arc<dyn AnalyticSurface>) -> SurfaceHandle {
-        self.surfaces.push(Named { object: Surface::Analytic(analytic), name: format!("surface_{}", self.surfaces.len()) });
+        self.surfaces.push(Named {
+            object: Surface::Analytic(analytic),
+            name: format!("surface_{}", self.surfaces.len()),
+        });
         SurfaceHandle(self.surfaces.len() - 1)
     }
 
@@ -100,7 +106,10 @@ impl Scene {
     // }
 
     pub fn add_object(&mut self, material: MaterialHandle, surface: SurfaceHandle) -> ObjectHandle {
-        self.objects.push(Named { object: Object { surface, material, }, name: format!("object_{}", self.objects.len())});
+        self.objects.push(Named {
+            object: Object { surface, material },
+            name: format!("object_{}", self.objects.len()),
+        });
         ObjectHandle(self.objects.len() - 1)
     }
 }

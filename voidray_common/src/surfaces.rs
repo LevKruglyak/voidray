@@ -68,7 +68,7 @@ impl AnalyticSurface for GroundPlane {
     fn hit(&self, ray: &Ray, t_min: Float, t_max: Float) -> Option<HitRecord> {
         let t = (self.height - ray.origin.y) / ray.direction.y;
 
-        if t <= t_min {
+        if t <= t_min || t >= t_max {
             return None;
         }
 

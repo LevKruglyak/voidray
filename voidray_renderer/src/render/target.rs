@@ -133,7 +133,8 @@ impl CpuRenderTarget {
     pub fn resize(&mut self, new_dimensions: [u32; 2]) {
         self.dimensions = new_dimensions;
 
-        *self.buffer.write().unwrap() = CpuBufferImage::new(self.queue.device().clone(), new_dimensions);
+        *self.buffer.write().unwrap() =
+            CpuBufferImage::new(self.queue.device().clone(), new_dimensions);
         *self.intermediate.write().unwrap() = ViewImage::new(
             self.queue.device().clone(),
             ImageUsage {
@@ -187,6 +188,37 @@ impl CpuRenderTarget {
         }
     }
 
+    /// Assuming we can block on the buffer, blockingly copy it to the intermediate view
+    pub fn push(&mut self) {
+        let buffer_read = self.buffer.read().unwrap();
+
+        let intermediate_write = self.intermediate.write().unwrap();
+        let mut builder = AutoCommandBufferBuilder::primary(
+            self.queue.device().clone(),
+            self.queue.family(),
+            CommandBufferUsage::OneTimeSubmit,
+        )
+        .unwrap();
+
+        builder
+            .copy_buffer_to_image(CopyBufferToImageInfo::buffer_image(
+                buffer_read.buffer.clone(),
+                intermediate_write.image.clone(),
+            ))
+            .unwrap();
+        let command_buffer = builder.build().unwrap();
+
+        let future = sync::now(self.queue.device().clone())
+            .then_execute(self.queue.clone(), command_buffer)
+            .unwrap()
+            .then_signal_fence_and_flush()
+            .unwrap();
+
+        future.wait(None).unwrap();
+
+        self.synced = false;
+    }
+
     /// Assuming we can block on the view, try to copy into it from the intermediate view
     pub fn try_pull(&mut self) {
         let view_write = self.view.read().unwrap();
@@ -231,7 +263,10 @@ impl CpuRenderTarget {
     }
 
     pub fn clear(&mut self) {
-        self.buffer().as_slice_mut().iter_mut().for_each(|x| *x = 0.0);
+        self.buffer()
+            .as_slice_mut()
+            .iter_mut()
+            .for_each(|x| *x = 0.0);
         self.try_push();
     }
 }

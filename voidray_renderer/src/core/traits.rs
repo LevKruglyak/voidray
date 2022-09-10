@@ -4,13 +4,17 @@ use crate::preamble::*;
 use crate::rand::*;
 use crate::ray::*;
 
-/// BSDF material trait
-pub trait Material: Send + Sync {
-    /// Bidirectional scattering distribution function
-    fn bsdf(&self, normal: Vec3, to_viewer: Vec3, to_incident: Vec3) -> Color;
+// /// BSDF material trait
+// pub trait Material: Send + Sync {
+//     /// Bidirectional scattering distribution function
+//     fn bsdf(&self, normal: Vec3, to_viewer: Vec3, to_incident: Vec3) -> Color;
+//
+//     /// Importance sample function for the light hemisphere, returns (to_incident, pdf)
+//     fn sample(&self, normal: Vec3, to_viewer: Vec3, rng: &mut ThreadRng) -> Option<(Vec3, Float)>;
+// }
 
-    /// Importance sample function for the light hemisphere, returns (to_incident, pdf)
-    fn sample(&self, normal: Vec3, to_viewer: Vec3, rng: &mut ThreadRng) -> Option<(Vec3, Float)>;
+pub trait Material: Send + Sync {
+    fn scatter(&self, ray: &Ray, hit: &HitRecord, rng: &mut ThreadRng) -> (Color, Option<Ray>);
 }
 
 /// A surface defined mathematically, not through a mesh

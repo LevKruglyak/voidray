@@ -1,14 +1,14 @@
 #![allow(dead_code, unused_variables)]
 
 mod core;
-pub mod render;
 pub mod graphics;
+pub mod render;
 mod util;
 
+pub use crate::core::camera;
+pub use crate::core::scene;
 pub use crate::core::settings;
 pub use crate::core::traits;
-pub use crate::core::scene;
-pub use crate::core::camera;
 
 pub use util::aabb;
 pub use util::color;
@@ -30,8 +30,8 @@ pub mod preamble {
 }
 
 pub use vulkano;
-pub use vulkano_util;
 pub use vulkano_shaders;
 pub use vulkano_shaders::shader;
+pub use vulkano_util;
 
 pub use rayon;

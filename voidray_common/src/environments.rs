@@ -1,4 +1,5 @@
 use voidray_renderer::color::*;
+use voidray_renderer::math::lerp;
 use voidray_renderer::math::to_spherical_coords;
 use voidray_renderer::preamble::*;
 use voidray_renderer::ray::*;
@@ -61,6 +62,27 @@ impl HDRIEnvironment {
         );
         image.layer_data.channel_data.pixels
     }
+
+    fn bilinear_sample(&self, x: Float, y: Float) -> Color {
+        let len = self.image.len();
+        let x0 = (x as usize).min(self.width - 1);
+        let y0 = (y as usize).min(self.height - 1);
+        let ax = x - x0 as Float;
+        let ay = y - y0 as Float;
+        lerp(
+            lerp(
+                self.image[(y0 * self.width + x0) as usize % len],
+                self.image[(y0 * self.width + x0 + 1) as usize % len],
+                ax,
+            ),
+            lerp(
+                self.image[((y0 + 1) * self.width + x0) as usize % len],
+                self.image[((y0 + 1) * self.width + x0 + 1) as usize % len],
+                ax,
+            ),
+            ay,
+        )
+    }
 }
 
 impl Environment for HDRIEnvironment {
@@ -68,8 +90,11 @@ impl Environment for HDRIEnvironment {
         let spherical_coords = to_spherical_coords(ray.direction.normalize());
         let u = spherical_coords.x / PI;
         let v = spherical_coords.y / (2.0 * PI);
-        let x = (v * self.width as Float) as usize % self.width;
-        let y = self.height - 1 - (u * self.height as Float) as usize % self.height;
-        self.image[x + y * self.width]
+        let x = v * self.width as Float;
+        let y = (self.height - 1) as Float - (u * self.height as Float);
+        self.bilinear_sample(x, y)
+
+        // No bilinear sample
+        // self.image[(x as usize % self.width) + (y as usize % self.height) * self.height]
     }
 }

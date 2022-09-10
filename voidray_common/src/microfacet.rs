@@ -101,7 +101,7 @@ impl MicrofacetBSDF {
 }
 
 #[allow(clippy::many_single_char_names)]
-impl Material for MicrofacetBSDF {
+impl MicrofacetBSDF {
     /// Bidirectional scattering distribution function
     ///
     /// - `n` - surface normal vector

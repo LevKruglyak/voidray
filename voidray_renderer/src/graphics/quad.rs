@@ -2,11 +2,10 @@ use crate::preamble::*;
 use bytemuck::{Pod, Zeroable};
 use vulkano::{
     buffer::{BufferUsage, CpuAccessibleBuffer, TypedBufferAccess},
-    command_buffer::{
-        AutoCommandBufferBuilder, SecondaryAutoCommandBuffer,
-    },
+    command_buffer::{AutoCommandBufferBuilder, SecondaryAutoCommandBuffer},
     device::Queue,
-    impl_vertex, pipeline::graphics::vertex_input::BuffersDefinition,
+    impl_vertex,
+    pipeline::graphics::vertex_input::BuffersDefinition,
 };
 
 #[repr(C)]

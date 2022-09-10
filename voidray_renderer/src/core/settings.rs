@@ -5,7 +5,7 @@ pub struct Settings {
     pub render: RenderSettings,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum RenderMode {
     Normal,
     Full,
@@ -13,6 +13,8 @@ pub enum RenderMode {
 
 #[derive(Clone)]
 pub struct RenderSettings {
+    pub total_samples: u32,
+    pub update_frequency: u32,
     pub render_mode: RenderMode,
     pub firefly_clamp: Float,
     pub max_bounces: u32,
@@ -21,6 +23,8 @@ pub struct RenderSettings {
 impl Default for RenderSettings {
     fn default() -> Self {
         Self {
+            total_samples: 100,
+            update_frequency: 1,
             render_mode: RenderMode::Full,
             firefly_clamp: 3.0,
             max_bounces: 10,
