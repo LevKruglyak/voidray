@@ -82,12 +82,12 @@ pub struct CpuRenderTarget {
     buffer: Arc<RwLock<CpuBufferImage>>,
     intermediate: Arc<RwLock<ViewImage>>,
     view: Arc<RwLock<ViewImage>>,
-    synced: bool,
-    dimensions: [u32; 2],
+    synced: Arc<RwLock<bool>>,
+    dimensions: Arc<RwLock<[u32; 2]>>,
 }
 
 impl CpuRenderTarget {
-    pub fn new(queue: Arc<Queue>, dimensions: [u32; 2]) -> Arc<RwLock<Self>> {
+    pub fn new(queue: Arc<Queue>, dimensions: [u32; 2]) -> Arc<Self> {
         let buffer = CpuBufferImage::new(queue.device().clone(), dimensions);
 
         let intermediate = ViewImage::new(
@@ -114,24 +114,24 @@ impl CpuRenderTarget {
 
         println!("created render target of dimensions {:?}", dimensions);
 
-        Arc::new(RwLock::new(Self {
+        Arc::new(Self {
             queue,
             buffer: Arc::new(RwLock::new(buffer)),
             intermediate: Arc::new(RwLock::new(intermediate)),
             view: Arc::new(RwLock::new(view)),
-            synced: false,
-            dimensions,
-        }))
+            synced: Arc::new(RwLock::new(false)),
+            dimensions: Arc::new(RwLock::new(dimensions)),
+        })
     }
 
     pub fn dimensions(&self) -> [u32; 2] {
-        self.dimensions
+        *self.dimensions.read().unwrap()
     }
 
     /// Resizes the render target
     /// - Will block on all internal locks, make sure no threads are using the buffer or view
-    pub fn resize(&mut self, new_dimensions: [u32; 2]) {
-        self.dimensions = new_dimensions;
+    pub fn resize(&self, new_dimensions: [u32; 2]) {
+        *self.dimensions.write().unwrap() = new_dimensions;
 
         *self.buffer.write().unwrap() =
             CpuBufferImage::new(self.queue.device().clone(), new_dimensions);
@@ -158,7 +158,7 @@ impl CpuRenderTarget {
     }
 
     /// Assuming we can block on the buffer, try to copy it to the intermediate view
-    pub fn try_push(&mut self) {
+    pub fn try_push(&self) {
         let buffer_read = self.buffer.read().unwrap();
         if let Ok(intermediate_write) = self.intermediate.try_write() {
             let mut builder = AutoCommandBufferBuilder::primary(
@@ -184,12 +184,12 @@ impl CpuRenderTarget {
 
             future.wait(None).unwrap();
 
-            self.synced = false;
+            *self.synced.write().unwrap() = false;
         }
     }
 
     /// Assuming we can block on the buffer, blockingly copy it to the intermediate view
-    pub fn push(&mut self) {
+    pub fn push(&self) {
         let buffer_read = self.buffer.read().unwrap();
 
         let intermediate_write = self.intermediate.write().unwrap();
@@ -216,11 +216,11 @@ impl CpuRenderTarget {
 
         future.wait(None).unwrap();
 
-        self.synced = false;
+        *self.synced.write().unwrap() = false;
     }
 
     /// Assuming we can block on the view, try to copy into it from the intermediate view
-    pub fn try_pull(&mut self) {
+    pub fn try_pull(&self) {
         let view_write = self.view.read().unwrap();
         if let Ok(intermediate_read) = self.intermediate.try_read() {
             let mut builder = AutoCommandBufferBuilder::primary(
@@ -245,7 +245,7 @@ impl CpuRenderTarget {
                 .unwrap();
 
             future.wait(None).unwrap();
-            self.synced = true;
+            *self.synced.write().unwrap() = true;
         }
     }
 
@@ -254,15 +254,16 @@ impl CpuRenderTarget {
     }
 
     /// Returns the image view, copying if out of sync
-    pub fn view(&mut self) -> Arc<ImageView<AttachmentImage>> {
-        if !self.synced {
+    pub fn view(&self) -> Arc<ImageView<AttachmentImage>> {
+        // Should be non blocking!!!
+        if !*self.synced.read().unwrap() {
             self.try_pull();
         }
 
         self.view.read().unwrap().view()
     }
 
-    pub fn clear(&mut self) {
+    pub fn clear(&self) {
         self.buffer()
             .as_slice_mut()
             .iter_mut()

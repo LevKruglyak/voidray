@@ -1,5 +1,4 @@
-use std::sync::{Arc, RwLock};
-
+use std::sync::Arc;
 use super::target::CpuRenderTarget;
 use crate::graphics::quad::TexturedQuad;
 use vulkano::command_buffer::{
@@ -35,12 +34,12 @@ pub struct Viewport {
     queue: Arc<Queue>,
     subpass: Subpass,
     pipeline: Arc<GraphicsPipeline>,
-    target: Arc<RwLock<CpuRenderTarget>>,
+    target: Arc<CpuRenderTarget>,
     view_quad: TexturedQuad,
 }
 
 impl Viewport {
-    pub fn new(queue: Arc<Queue>, subpass: Subpass, target: Arc<RwLock<CpuRenderTarget>>) -> Self {
+    pub fn new(queue: Arc<Queue>, subpass: Subpass, target: Arc<CpuRenderTarget>) -> Self {
         let pipeline = {
             let vs = vs::load(queue.device().clone()).expect("failed to create shader module");
             let fs = fs::load(queue.device().clone()).expect("failed to create shader module");
@@ -86,7 +85,7 @@ impl Viewport {
         )
         .unwrap();
 
-        let view = self.target.write().unwrap().view();
+        let view = self.target.view();
 
         let descriptor_set = self.create_view_descriptor_set(view);
         secondary_builder

@@ -10,6 +10,7 @@ use voidray_renderer::camera::Camera;
 use voidray_renderer::color::*;
 use voidray_renderer::rayon::prelude::*;
 use voidray_renderer::render::iterative::iterative_render;
+use voidray_renderer::render::renderer::Renderer;
 use voidray_renderer::render::target::CpuRenderTarget;
 use voidray_renderer::render::viewport::Viewport;
 use voidray_renderer::scene::{Accelerable, Scene};
@@ -25,9 +26,10 @@ mod gui;
 mod widgets;
 
 pub struct VoidrayEngine {
-    pub target: Arc<RwLock<CpuRenderTarget>>,
+    pub target: Arc<CpuRenderTarget>,
     pub scene: Arc<RwLock<Scene>>,
     pub settings: Arc<RwLock<Settings>>,
+    pub renderer: Arc<RwLock<Renderer>>,
     viewport: Viewport,
 }
 
@@ -36,7 +38,7 @@ impl Engine for VoidrayEngine {
 
     fn init(context: &mut EngineContext<Self::Gui>) -> Self {
         let api = context.api();
-        let target = CpuRenderTarget::new(api.compute_queue(), [1200, 1000]);
+        let target = CpuRenderTarget::new(api.compute_queue(), [500, 500]);
         let mut scene = Scene::empty();
 
         let red = scene.add_material(Materials::metal(hex_color(0xE78999), 0.1));
@@ -76,13 +78,17 @@ impl Engine for VoidrayEngine {
 
         scene.environment = Environments::hdri("assets/studio.exr");
 
-        let mut settings = Settings::default();
+        let settings = Settings::default();
+
+        let scene = Arc::new(RwLock::new(scene));
+        let settings = Arc::new(RwLock::new(settings));
 
         Self {
             target: target.clone(),
-            scene: Arc::new(RwLock::new(scene)),
-            settings: Arc::new(RwLock::new(settings)),
-            viewport: Viewport::new(api.graphics_queue(), context.viewport_subpass(), target),
+            scene: scene.clone(),
+            settings: settings.clone(),
+            viewport: Viewport::new(api.graphics_queue(), context.viewport_subpass(), target.clone()),
+            renderer: Arc::new(RwLock::new(Renderer::new(api.compute_queue(), scene, settings, target))),
         }
     }
 

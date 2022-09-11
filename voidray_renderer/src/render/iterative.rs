@@ -9,17 +9,16 @@ use rand::{thread_rng, Rng};
 use rayon::prelude::*;
 
 pub fn iterative_render(
-    target: Arc<RwLock<CpuRenderTarget>>,
+    target: Arc<CpuRenderTarget>,
     scene: &SceneAcceleration,
     settings: &RenderSettings,
     samples: u32,
     total_samples: u32,
 ) {
-    let mut target_write = target.write().unwrap();
-    let dimensions = target_write.dimensions();
+    let dimensions = target.dimensions();
 
-    target_write
-        .buffer()
+    target
+        .buffer() 
         .as_slice_mut()
         .par_chunks_exact_mut(4)
         .enumerate()
@@ -53,5 +52,5 @@ pub fn iterative_render(
             pixel[3] += color.a() as f32;
         });
 
-    target_write.try_push();
+    target.try_push();
 }

@@ -39,12 +39,20 @@ pub fn engine_ui(
         .min_width(250.0)
         .resizable(false)
         .show(context, |ui| {
-            let currently_rendering = false;
+            let currently_rendering = engine.renderer.read().unwrap().currently_rendering();
             let mut modified = false;
 
-            let mut settings = engine.settings.write().unwrap();
-            settings.render.display_ui(ui, &mut modified, !currently_rendering);
-            render_actions(ui, currently_rendering);
+            {
+                let mut settings = engine.settings.write().unwrap();
+               settings.render.display_ui(ui, &mut modified, !currently_rendering);
+            }
+            render_actions(engine, ui, currently_rendering);
+        
+            let samples = engine.renderer.read().unwrap().samples();
+
+            ui.add_space(5.0);
+            ui.label(format!("Samples: {}/{}", samples.0, samples.1));
+            // ui.label(format!("Elapsed time: {:.4}s", time.as_secs_f32()));
         });
 }
 
@@ -96,7 +104,7 @@ impl Editable for RenderSettings {
     }
 }
 
-pub fn render_actions(ui: &mut Ui, rendering: bool) { 
+pub fn render_actions(engine: &mut VoidrayEngine, ui: &mut Ui, rendering: bool) { 
     let width = 125.0;
     Grid::new("render_actions")
         .num_columns(2)
@@ -108,14 +116,14 @@ pub fn render_actions(ui: &mut Ui, rendering: bool) {
             ui.add_enabled_ui(!rendering, |ui| {
                 ui.horizontal_centered(|ui| {
                     if ui.add(FatButton::new("Render").width(width)).clicked() {
-                        // self.renderer.execute(RenderAction::Start);
+                        engine.renderer.write().unwrap().execute(RenderAction::Render);
                     }
                 });
             });
             ui.add_enabled_ui(rendering, |ui| {
                 ui.horizontal_centered(|ui| {
                     if ui.add(FatButton::new("Cancel").width(width)).clicked() {
-                        // self.renderer.execute(RenderAction::Cancel);
+                        engine.renderer.write().unwrap().execute(RenderAction::Cancel);
                     }
                 });
             });
