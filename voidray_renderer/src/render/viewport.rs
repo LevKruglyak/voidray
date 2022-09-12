@@ -86,7 +86,7 @@ impl Viewport {
         &mut self,
         command_buffer: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>,
         viewport: graphics::viewport::Viewport,
-        data: PostProcessingData,
+        data: Option<PostProcessingData>,
     ) {
         let mut secondary_builder = AutoCommandBufferBuilder::secondary(
             self.graphics_queue.device().clone(),
@@ -99,7 +99,7 @@ impl Viewport {
         )
         .unwrap();
 
-        let view = {
+        let view = if let Some(data) = data {
             let pre_process = self.target.pull_view();
             let post_process = self.target.get_view(1);
 
@@ -107,6 +107,8 @@ impl Viewport {
             self.post_process
                 .render(pre_process, post_process.clone(), data);
             post_process
+        } else {
+            self.target.pull_view()
         };
 
         let descriptor_set = self.create_view_descriptor_set(view);

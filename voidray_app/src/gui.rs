@@ -1,3 +1,4 @@
+use voidray_launcher::Engine;
 use voidray_launcher::EngineApi;
 use voidray_renderer::render::renderer::RenderAction;
 use voidray_renderer::settings::ColorManagementSettings;
@@ -23,7 +24,7 @@ pub fn engine_ui(engine: &mut VoidrayEngine, context: &mut Context, api: &mut En
             ui.with_layout(Layout::right_to_left(), |ui| {
                 ui.label(format!(
                     "Voidray Engine - v{}",
-                    option_env!("CARGO_PKG_VERSION").unwrap_or("unknown")
+                    option_env!("CARGO_PKG_VERSION").unwrap_or(" unknown")
                 ));
             });
         });
@@ -48,10 +49,11 @@ pub fn engine_ui(engine: &mut VoidrayEngine, context: &mut Context, api: &mut En
             render_actions(engine, ui, currently_rendering);
 
             let samples = engine.renderer.samples();
+            let time = engine.renderer.elapsed_time();
 
             ui.add_space(5.0);
             ui.label(format!("Samples: {}/{}", samples.0, samples.1));
-            // ui.label(format!("Elapsed time: {:.4}s", time.as_secs_f32()));
+            ui.label(format!("Elapsed time: {:.4}s", time.as_secs_f32()));
         });
 
     SidePanel::right("right_panel")
@@ -164,10 +166,18 @@ impl Editable for ColorManagementSettings {
                                 });
                             ui.end_row();
                             ui.label("Gamma");
-                            ui.add(DragValue::new(&mut self.gamma).speed(0.02).clamp_range(0.1..=5.0));
+                            ui.add(
+                                DragValue::new(&mut self.gamma)
+                                    .speed(0.02)
+                                    .clamp_range(0.1..=5.0),
+                            );
                             ui.end_row();
                             ui.label("Exposure:");
-                            ui.add(DragValue::new(&mut self.exposure).speed(0.02).clamp_range(-16.0..=16.0));
+                            ui.add(
+                                DragValue::new(&mut self.exposure)
+                                    .speed(0.02)
+                                    .clamp_range(-16.0..=16.0),
+                            );
                             ui.end_row();
                             ui.label("Transparent:");
                             ui.checkbox(&mut self.transparent, "");

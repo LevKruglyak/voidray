@@ -46,6 +46,9 @@ impl RenderThread {
         let handle = thread::spawn(move || {
             thread_stats.write().unwrap().currently_rendering = true;
 
+            // Start the timer
+            thread_stats.write().unwrap().time = Some((Instant::now(), None));
+
             // Clear the target
             thread_target.clear();
 
@@ -96,6 +99,9 @@ impl RenderThread {
 
             // Finish rendering
             thread_stats.write().unwrap().currently_rendering = false;
+            let time = thread_stats.read().unwrap().time;
+            thread_stats.write().unwrap().time =
+                time.map(|(start, _)| (start, Some(Instant::now())));
         });
 
         Self {
@@ -222,5 +228,16 @@ impl Renderer {
 
     pub fn samples(&self) -> (u32, u32) {
         self.stats.read().unwrap().samples
+    }
+
+    pub fn elapsed_time(&self) -> Duration {
+        let stats = self.stats.read().unwrap();
+
+        if let Some((start, end)) = stats.time {
+            #[allow(clippy::or_fun_call)]
+            return end.unwrap_or(Instant::now()).duration_since(start);
+        }
+
+        Duration::default()
     }
 }

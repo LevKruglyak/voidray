@@ -67,7 +67,7 @@ impl Default for ColorManagementSettings {
         Self {
             tonemap: Tonemap::None,
             gamma: 2.2,
-            exposure: 0.0, 
+            exposure: 0.0,
             transparent: true,
         }
     }
