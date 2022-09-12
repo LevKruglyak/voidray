@@ -6,6 +6,6 @@ edition = "2021"
 authors = ["Lev Kruglyak <lev.kruglyak2014@gmail.com>"]
 
 [dependencies]
-exr = "1.4.2"
+image = "0.24"
 
 voidray_renderer = { path = "../voidray_renderer", features = [] }

@@ -12,9 +12,9 @@ use voidray_renderer::render::renderer::Renderer;
 use voidray_renderer::render::target::CpuRenderTarget;
 use voidray_renderer::render::viewport::Viewport;
 use voidray_renderer::scene::Scene;
-use voidray_renderer::settings::RenderMode;
 use voidray_renderer::settings::Settings;
-use voidray_renderer::traits::Environment;
+use voidray_renderer::settings::Tonemap;
+use voidray_renderer::texture::SampleType;
 use voidray_renderer::vulkano::command_buffer::{
     AutoCommandBufferBuilder, PrimaryAutoCommandBuffer,
 };
@@ -60,6 +60,12 @@ impl Engine for VoidrayEngine {
             scene.add_object(mtl, sph);
         }
 
+        let glass_2 = scene.add_material(Materials::dielectric(1.5));
+        let sph = scene.add_analytic_surface(Surfaces::sphere(vec3!(1.5, 2.7, -3.1), 0.7));
+        let sph_inner = scene.add_analytic_surface(Surfaces::sphere(vec3!(1.5, 2.69, -3.1), -0.69));
+        scene.add_object(glass_2, sph);
+        scene.add_object(glass_2, sph_inner);
+
         let light = scene.add_analytic_surface(Surfaces::sphere(vec3!(1.2, 8.0, -1.5), 2.0));
         scene.add_object(light_mtl, light);
 
@@ -69,15 +75,23 @@ impl Engine for VoidrayEngine {
             vec3!(0.0, 1.0, 0.0),
             0.6911,
         );
-        scene.camera.dof = Some((0.15, vec3!(0.1, 0.6, -2.0)));
+        scene.camera.dof = Some((0.12, vec3!(0.1, 0.6, -2.0)));
+
+        let saloon_albedo =
+            scene.add_image_texture("assets/wood_albedo.tif", SampleType::Nearest);
+        let saloon_normal =
+            scene.add_image_texture("assets/wood_normal.tif", SampleType::Nearest);
 
         let gnd = scene.add_analytic_surface(Surfaces::ground_plane(0.0));
-        let gnd_mat = scene.add_material(Materials::lambertian(GRAY(0.2)));
+        let gnd_mat = scene.add_material(Materials::lambertian_texture(saloon_albedo, saloon_normal));
         scene.add_object(gnd_mat, gnd);
 
         scene.environment = Environments::hdri("assets/indoor.exr");
 
-        let settings = Settings::default();
+        let mut settings = Settings::default();
+        settings.color_management.tonemap = Tonemap::ACES;
+        settings.color_management.gamma = 1.0;
+        settings.color_management.exposure = 2.0;
 
         let scene = Arc::new(RwLock::new(scene));
         let settings = Arc::new(RwLock::new(settings));

@@ -1,19 +1,30 @@
-use std::ops::Mul;
 use std::sync::Arc;
 
-use voidray_renderer::math::{local_to_world, near_zero, reflect, refract};
-use voidray_renderer::rand::rand_distr::{self, UnitSphere};
+use voidray_renderer::color::*;
+use voidray_renderer::math::{near_zero, reflect, refract};
+use voidray_renderer::rand::rand_distr::UnitSphere;
 use voidray_renderer::rand::{Rng, ThreadRng};
 use voidray_renderer::ray::*;
+use voidray_renderer::scene::{SceneAcceleration, TextureHandle};
+use voidray_renderer::texture::AbstractTexture;
 use voidray_renderer::traits::Material;
 use voidray_renderer::vector::*;
-use voidray_renderer::{color::*, vec3};
 
 pub struct Materials {}
 
 impl Materials {
     pub fn lambertian(albedo: Color) -> Arc<dyn Material> {
-        Arc::new(Lambertian { albedo })
+        Arc::new(Lambertian {
+            albedo: ColorType::Color(albedo),
+            normal: None,
+        })
+    }
+
+    pub fn lambertian_texture(albedo: TextureHandle, normal: TextureHandle) -> Arc<dyn Material> {
+        Arc::new(Lambertian {
+            albedo: ColorType::Texture(albedo),
+            normal: Some(normal),
+        })
     }
 
     pub fn metal(albedo: Color, fuzz: Float) -> Arc<dyn Material> {
@@ -53,27 +64,55 @@ impl Materials {
     // }
 }
 
+pub enum ColorType {
+    Color(Color),
+    Texture(TextureHandle),
+}
+
 pub struct Lambertian {
-    albedo: Color,
+    albedo: ColorType,
+    normal: Option<TextureHandle>,
 }
 
 impl Lambertian {
     pub fn new(albedo: Color) -> Self {
-        Self { albedo }
+        Self {
+            albedo: ColorType::Color(albedo),
+            normal: None,
+        }
     }
 }
 
 impl Material for Lambertian {
-    fn scatter(&self, ray: &Ray, hit: &HitRecord, rng: &mut ThreadRng) -> (Color, Option<Ray>) {
-        let mut scatter_direction = hit.normal + Vec3::from(rng.sample(UnitSphere));
+    fn scatter(
+        &self,
+        scene: &SceneAcceleration,
+        ray: &Ray,
+        hit: &HitRecord,
+        rng: &mut ThreadRng,
+    ) -> (Color, Option<Ray>) {
+        let normal = if let Some(normal_map) = self.normal {
+            scene.texture_ref(normal_map).sample(hit.uv.x, hit.uv.y).0
+        } else {
+            hit.normal
+        };
+
+        let mut scatter_direction = normal + Vec3::from(rng.sample(UnitSphere));
 
         if near_zero(scatter_direction) {
             // Catch degenerate scatter direction
-            scatter_direction = hit.normal;
+            scatter_direction = normal;
         }
 
         let scattered = Ray::new(hit.point, scatter_direction);
-        (self.albedo, Some(scattered))
+        match self.albedo {
+            ColorType::Color(albedo) => (albedo, Some(scattered)),
+            ColorType::Texture(texture) => (
+                scene.texture_ref(texture).sample(hit.uv.x, hit.uv.y),
+                // Color::new(u, v, 0.0),
+                Some(scattered),
+            ),
+        }
     }
 }
 
@@ -83,7 +122,13 @@ pub struct Metal {
 }
 
 impl Material for Metal {
-    fn scatter(&self, ray: &Ray, hit: &HitRecord, rng: &mut ThreadRng) -> (Color, Option<Ray>) {
+    fn scatter(
+        &self,
+        scene: &SceneAcceleration,
+        ray: &Ray,
+        hit: &HitRecord,
+        rng: &mut ThreadRng,
+    ) -> (Color, Option<Ray>) {
         let reflected = reflect(ray.direction, hit.normal).normalize();
         let scattered = Ray::new(
             hit.point,
@@ -111,7 +156,13 @@ impl Emission {
 }
 
 impl Material for Emission {
-    fn scatter(&self, _ray: &Ray, hit: &HitRecord, rng: &mut ThreadRng) -> (Color, Option<Ray>) {
+    fn scatter(
+        &self,
+        scene: &SceneAcceleration,
+        ray: &Ray,
+        hit: &HitRecord,
+        rng: &mut ThreadRng,
+    ) -> (Color, Option<Ray>) {
         (self.color, None)
     }
 }
@@ -130,7 +181,13 @@ impl Dielectric {
 }
 
 impl Material for Dielectric {
-    fn scatter(&self, ray: &Ray, hit: &HitRecord, rng: &mut ThreadRng) -> (Color, Option<Ray>) {
+    fn scatter(
+        &self,
+        scene: &SceneAcceleration,
+        ray: &Ray,
+        hit: &HitRecord,
+        rng: &mut ThreadRng,
+    ) -> (Color, Option<Ray>) {
         let refraction_ratio = if hit.front_face {
             1.0 / self.ir
         } else {

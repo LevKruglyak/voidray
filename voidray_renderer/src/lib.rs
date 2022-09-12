@@ -8,6 +8,7 @@ mod util;
 pub use crate::core::camera;
 pub use crate::core::scene;
 pub use crate::core::settings;
+pub use crate::core::texture;
 pub use crate::core::traits;
 
 pub use util::aabb;

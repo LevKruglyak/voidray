@@ -56,7 +56,13 @@ impl AnalyticSurface for Sphere {
         let point = ray.at(root);
         let normal = (point - self.center) / self.radius;
 
-        Some(HitRecord::new(point, normal, root, ray))
+        Some(HitRecord::new(
+            point,
+            normal,
+            root,
+            Vec2::new(0.0, 0.0),
+            ray,
+        ))
     }
 }
 
@@ -72,7 +78,20 @@ impl AnalyticSurface for GroundPlane {
             return None;
         }
 
-        Some(HitRecord::new(ray.at(t), Vec3::new(0.0, 1.0, 0.0), t, ray))
+        let world_pos = ray.at(t);
+        let uv = Vec2::new(world_pos.x, world_pos.z);
+
+        if uv.magnitude2() >= 150.0 {
+            return None;
+        }
+
+        Some(HitRecord::new(
+            world_pos,
+            Vec3::new(0.0, 1.0, 0.0),
+            t,
+            uv,
+            ray,
+        ))
     }
 }
 

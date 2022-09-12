@@ -1,4 +1,5 @@
 use super::camera::{Camera, CameraAcceleration};
+use super::texture::{ImageTexture, SampleType, Texture};
 use crate::core::traits::*;
 use crate::preamble::*;
 use crate::ray::*;
@@ -31,6 +32,7 @@ pub struct Object {
 
 pub struct Scene {
     pub camera: Camera,
+    pub textures: Vec<Named<Arc<Texture>>>,
     pub objects: Vec<Named<Object>>,
     pub surfaces: Vec<Named<Surface>>,
     pub materials: Vec<Named<Arc<dyn Material>>>,
@@ -46,11 +48,15 @@ pub struct ObjectHandle(usize);
 #[derive(Clone, Copy)]
 pub struct SurfaceHandle(usize);
 
+#[derive(Clone, Copy)]
+pub struct TextureHandle(usize);
+
 pub struct SceneAcceleration {
     pub camera: CameraAcceleration,
     pub environment: Option<Arc<dyn Environment>>,
     objects: Vec<Object>,
     surfaces: Vec<Surface>,
+    textures: Vec<Arc<Texture>>,
     materials: Vec<Arc<dyn Material>>,
 }
 
@@ -79,6 +85,7 @@ impl Scene {
             materials: Vec::new(),
             objects: Vec::new(),
             surfaces: Vec::new(),
+            textures: Vec::new(),
             environment: None,
         }
     }
@@ -112,6 +119,14 @@ impl Scene {
         });
         ObjectHandle(self.objects.len() - 1)
     }
+
+    pub fn add_image_texture(&mut self, path: &str, sample_type: SampleType) -> TextureHandle {
+        self.textures.push(Named {
+            object: Arc::new(Texture::Image(ImageTexture::new(path, sample_type))),
+            name: format!("texture_{}", self.textures.len()),
+        });
+        TextureHandle(self.textures.len() - 1)
+    }
 }
 
 impl Accelerable<SceneAcceleration> for Scene {
@@ -121,6 +136,7 @@ impl Accelerable<SceneAcceleration> for Scene {
             objects: self.objects.build_acceleration(),
             surfaces: self.surfaces.build_acceleration(),
             materials: self.materials.build_acceleration(),
+            textures: self.textures.build_acceleration(),
             environment: self.environment.clone(),
         }
     }
@@ -153,5 +169,9 @@ impl SceneAcceleration {
 
     pub fn material_ref(&self, material_handle: MaterialHandle) -> &dyn Material {
         self.materials[material_handle.0].as_ref()
+    }
+
+    pub fn texture_ref(&self, texture_handle: TextureHandle) -> &Texture {
+        self.textures[texture_handle.0].as_ref()
     }
 }

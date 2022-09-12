@@ -1,6 +1,5 @@
 use std::ops::{Add, Mul};
 
-use crate::rand::*;
 use crate::vector::*;
 
 /// Returns true if a vector is smaller than 1.0e-8 in each coordinate

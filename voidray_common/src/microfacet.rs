@@ -2,9 +2,8 @@ use voidray_renderer::color::*;
 use voidray_renderer::math::*;
 use voidray_renderer::preamble::*;
 use voidray_renderer::rand::*;
-use voidray_renderer::traits::Material;
+
 use voidray_renderer::vec3;
-use voidray_renderer::vector::*;
 
 pub struct MicrofacetBSDF {
     /// Albedo color

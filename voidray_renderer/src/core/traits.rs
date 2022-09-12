@@ -3,6 +3,7 @@ use crate::color::*;
 use crate::preamble::*;
 use crate::rand::*;
 use crate::ray::*;
+use crate::scene::SceneAcceleration;
 
 // /// BSDF material trait
 // pub trait Material: Send + Sync {
@@ -14,7 +15,13 @@ use crate::ray::*;
 // }
 
 pub trait Material: Send + Sync {
-    fn scatter(&self, ray: &Ray, hit: &HitRecord, rng: &mut ThreadRng) -> (Color, Option<Ray>);
+    fn scatter(
+        &self,
+        scene: &SceneAcceleration,
+        ray: &Ray,
+        hit: &HitRecord,
+        rng: &mut ThreadRng,
+    ) -> (Color, Option<Ray>);
 }
 
 /// A surface defined mathematically, not through a mesh

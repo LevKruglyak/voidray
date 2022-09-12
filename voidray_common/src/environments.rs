@@ -4,7 +4,6 @@ use voidray_renderer::math::to_spherical_coords;
 use voidray_renderer::preamble::*;
 use voidray_renderer::ray::*;
 use voidray_renderer::traits::Environment;
-
 pub struct Environments {}
 
 impl Environments {
@@ -41,26 +40,18 @@ struct HDRIEnvironment {
 
 impl HDRIEnvironment {
     fn new(path: &str) -> Self {
-        let image = exr::prelude::read_first_rgba_layer_from_file(
-            path,
-            |resolution, _| Self {
-                image: vec![BLACK; resolution.width() * resolution.height()],
-                width: resolution.width(),
-                height: resolution.height(),
-            },
-            |skymap: &mut Self, position, (r, g, b, _): (f32, f32, f32, f32)| {
-                skymap.image[position.x() + position.y() * skymap.width] =
-                    Color::new(r as Float, g as Float, b as Float);
-            },
-        )
-        .expect("could not read image!");
-        println!(
-            "loaded '{}', dimensions: {},{}",
-            path,
-            image.layer_data.channel_data.pixels.width,
-            image.layer_data.channel_data.pixels.height
-        );
-        image.layer_data.channel_data.pixels
+        let image = image::open(path).unwrap().to_rgb32f();
+        let dimensions = image.dimensions();
+
+        Self {
+            image: image
+                .into_vec()
+                .chunks_exact(3)
+                .map(|data| Color::new(data[0], data[1], data[2]))
+                .collect(),
+            width: dimensions.0 as usize,
+            height: dimensions.1 as usize,
+        }
     }
 
     fn bilinear_sample(&self, x: Float, y: Float) -> Color {
