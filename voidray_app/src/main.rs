@@ -2,7 +2,7 @@
 
 use std::thread;
 
-use gui::{Editable, render_actions, engine_ui};
+use gui::{engine_ui, render_actions, Editable};
 use voidray_common::{simple::Materials, Environments, Surfaces};
 use voidray_launcher::gui_implementation::*;
 use voidray_launcher::*;
@@ -10,11 +10,12 @@ use voidray_renderer::camera::Camera;
 use voidray_renderer::color::*;
 use voidray_renderer::rayon::prelude::*;
 use voidray_renderer::render::iterative::iterative_render;
+use voidray_renderer::render::post_process::PostProcessingData;
 use voidray_renderer::render::renderer::Renderer;
 use voidray_renderer::render::target::CpuRenderTarget;
 use voidray_renderer::render::viewport::Viewport;
 use voidray_renderer::scene::{Accelerable, Scene};
-use voidray_renderer::settings::{Settings, RenderSettings};
+use voidray_renderer::settings::{RenderSettings, Settings};
 use voidray_renderer::vulkano::command_buffer::{
     AutoCommandBufferBuilder, PrimaryAutoCommandBuffer,
 };
@@ -29,7 +30,7 @@ pub struct VoidrayEngine {
     pub target: Arc<CpuRenderTarget>,
     pub scene: Arc<RwLock<Scene>>,
     pub settings: Arc<RwLock<Settings>>,
-    pub renderer: Arc<RwLock<Renderer>>,
+    pub renderer: Renderer,
     viewport: Viewport,
 }
 
@@ -38,10 +39,10 @@ impl Engine for VoidrayEngine {
 
     fn init(context: &mut EngineContext<Self::Gui>) -> Self {
         let api = context.api();
-        let target = CpuRenderTarget::new(api.compute_queue(), [500, 500]);
+        let target = CpuRenderTarget::new(api.compute_queue(), 2, [1000, 1000]);
         let mut scene = Scene::empty();
 
-        let red = scene.add_material(Materials::metal(hex_color(0xE78999), 0.1));
+        let red = scene.add_material(Materials::lambertian(hex_color(0xE78999)));
         let yellow = scene.add_material(Materials::dielectric(1.5));
         let green = scene.add_material(Materials::metal(hex_color(0xB3E7AA), 0.1));
         let blue = scene.add_material(Materials::metal(hex_color(0x7CA3E7), 0.01));
@@ -87,8 +88,13 @@ impl Engine for VoidrayEngine {
             target: target.clone(),
             scene: scene.clone(),
             settings: settings.clone(),
-            viewport: Viewport::new(api.graphics_queue(), context.viewport_subpass(), target.clone()),
-            renderer: Arc::new(RwLock::new(Renderer::new(api.compute_queue(), scene, settings, target))),
+            viewport: Viewport::new(
+                api.graphics_queue(),
+                api.compute_queue(),
+                context.viewport_subpass(),
+                target.clone(),
+            ),
+            renderer: Renderer::new(api.compute_queue(), scene, settings, target),
         }
     }
 
@@ -107,7 +113,21 @@ impl Engine for VoidrayEngine {
         viewport: graphics::viewport::Viewport,
         api: &mut EngineApi,
     ) {
-        self.viewport.draw(command_buffer, viewport);
+        let samples = self.renderer.samples();
+        let mut scale = samples.1 as f32 / samples.0 as f32;
+        if !scale.is_normal() {
+            scale = 0.0;
+        }
+
+        let settings = self.settings.read().unwrap();
+        let data = PostProcessingData { 
+            scale,
+            exposure: settings.color_management.exposure,
+            gamma: settings.color_management.gamma,
+            tonemap: settings.color_management.tonemap.as_i32(),
+        };
+
+        self.viewport.draw(command_buffer, viewport, data);
     }
 }
 
@@ -115,7 +135,7 @@ fn main() {
     let options = EngineOptions {
         window_options: WindowOptions {
             title: "Voidray Engine",
-            dimensions: LogicalSize::new(1200, 1000),
+            dimensions: LogicalSize::new(1500, 1000),
         },
         ..EngineOptions::default()
     };

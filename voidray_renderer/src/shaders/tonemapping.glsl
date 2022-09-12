@@ -1,5 +1,5 @@
 // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
-vec3 tonemap_simple_ACES(vec3 color)
+vec3 tonemap_ACES(vec3 color)
 {
     color = mat3(0.59719, 0.076, 0.0284, 0.35458, 0.90834, 0.13383, 0.04823, 0.01566, 0.83777) * color;
     color = (color * (color + 0.0245786) - 0.000090537) / (color * (0.983729 * color + 0.432951) + 0.238081);

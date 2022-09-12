@@ -13,12 +13,11 @@ pub fn iterative_render(
     scene: &SceneAcceleration,
     settings: &RenderSettings,
     samples: u32,
-    total_samples: u32,
 ) {
     let dimensions = target.dimensions();
 
     target
-        .buffer() 
+        .buffer()
         .as_slice_mut()
         .par_chunks_exact_mut(4)
         .enumerate()
@@ -43,7 +42,7 @@ pub fn iterative_render(
                 color += trace_ray(scene, settings, x + dx, y + dy, &mut rng);
             }
 
-            color *= 1.0 / total_samples as Float;
+            color *= 1.0 / settings.total_samples as Float;
 
             // Copy into the target
             pixel[0] += color.r() as f32;

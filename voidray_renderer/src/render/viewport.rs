@@ -1,6 +1,7 @@
-use std::sync::Arc;
+use super::post_process::{PostProcessingData, PostProcessingPass};
 use super::target::CpuRenderTarget;
 use crate::graphics::quad::TexturedQuad;
+use std::sync::Arc;
 use vulkano::command_buffer::{
     AutoCommandBufferBuilder, CommandBufferInheritanceInfo, CommandBufferUsage,
     PrimaryAutoCommandBuffer,
@@ -31,18 +32,27 @@ mod fs {
 }
 
 pub struct Viewport {
-    queue: Arc<Queue>,
+    graphics_queue: Arc<Queue>,
+    compute_queue: Arc<Queue>,
     subpass: Subpass,
     pipeline: Arc<GraphicsPipeline>,
     target: Arc<CpuRenderTarget>,
     view_quad: TexturedQuad,
+    post_process: PostProcessingPass,
 }
 
 impl Viewport {
-    pub fn new(queue: Arc<Queue>, subpass: Subpass, target: Arc<CpuRenderTarget>) -> Self {
+    pub fn new(
+        graphics_queue: Arc<Queue>,
+        compute_queue: Arc<Queue>,
+        subpass: Subpass,
+        target: Arc<CpuRenderTarget>,
+    ) -> Self {
         let pipeline = {
-            let vs = vs::load(queue.device().clone()).expect("failed to create shader module");
-            let fs = fs::load(queue.device().clone()).expect("failed to create shader module");
+            let vs =
+                vs::load(graphics_queue.device().clone()).expect("failed to create shader module");
+            let fs =
+                fs::load(compute_queue.device().clone()).expect("failed to create shader module");
 
             GraphicsPipeline::start()
                 .vertex_input_state(TexturedQuad::buffers_definition())
@@ -54,18 +64,21 @@ impl Viewport {
                 .viewport_state(ViewportState::viewport_dynamic_scissor_irrelevant())
                 .render_pass(subpass.clone())
                 .color_blend_state(ColorBlendState::new(1).blend_alpha())
-                .build(queue.device().clone())
+                .build(graphics_queue.device().clone())
                 .expect("failed to make pipeline")
         };
 
-        let view_quad = TexturedQuad::new(queue.clone(), [-1.0, -1.0], [1.0, 1.0]);
+        let view_quad = TexturedQuad::new(graphics_queue.clone(), [-1.0, -1.0], [1.0, 1.0]);
+        let post_process = PostProcessingPass::new(compute_queue.clone());
 
         Self {
-            queue,
+            graphics_queue,
+            compute_queue,
             subpass,
             pipeline,
             target,
             view_quad,
+            post_process,
         }
     }
 
@@ -73,10 +86,11 @@ impl Viewport {
         &mut self,
         command_buffer: &mut AutoCommandBufferBuilder<PrimaryAutoCommandBuffer>,
         viewport: graphics::viewport::Viewport,
+        data: PostProcessingData,
     ) {
         let mut secondary_builder = AutoCommandBufferBuilder::secondary(
-            self.queue.device().clone(),
-            self.queue.family(),
+            self.graphics_queue.device().clone(),
+            self.graphics_queue.family(),
             CommandBufferUsage::OneTimeSubmit,
             CommandBufferInheritanceInfo {
                 render_pass: Some(self.subpass.clone().into()),
@@ -85,7 +99,15 @@ impl Viewport {
         )
         .unwrap();
 
-        let view = self.target.view();
+        let view = {
+            let pre_process = self.target.pull_view();
+            let post_process = self.target.get_view(1);
+
+            // Run post processing pass
+            self.post_process
+                .render(pre_process, post_process.clone(), data);
+            post_process
+        };
 
         let descriptor_set = self.create_view_descriptor_set(view);
         secondary_builder
@@ -108,7 +130,7 @@ impl Viewport {
         viewport_view: Arc<dyn ImageViewAbstract>,
     ) -> Arc<PersistentDescriptorSet> {
         let sampler = Sampler::new(
-            self.queue.device().clone(),
+            self.graphics_queue.device().clone(),
             SamplerCreateInfo {
                 mag_filter: Filter::Nearest,
                 min_filter: Filter::Linear,

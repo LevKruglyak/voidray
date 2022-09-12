@@ -81,13 +81,15 @@ pub struct CpuRenderTarget {
     queue: Arc<Queue>,
     buffer: Arc<RwLock<CpuBufferImage>>,
     intermediate: Arc<RwLock<ViewImage>>,
-    view: Arc<RwLock<ViewImage>>,
+    views: Arc<RwLock<Vec<ViewImage>>>,
     synced: Arc<RwLock<bool>>,
     dimensions: Arc<RwLock<[u32; 2]>>,
 }
 
 impl CpuRenderTarget {
-    pub fn new(queue: Arc<Queue>, dimensions: [u32; 2]) -> Arc<Self> {
+    pub fn new(queue: Arc<Queue>, passes: u32, dimensions: [u32; 2]) -> Arc<Self> {
+        assert!(passes > 0);
+
         let buffer = CpuBufferImage::new(queue.device().clone(), dimensions);
 
         let intermediate = ViewImage::new(
@@ -101,16 +103,20 @@ impl CpuRenderTarget {
             dimensions,
         );
 
-        let view = ViewImage::new(
-            queue.device().clone(),
-            ImageUsage {
-                transfer_src: false,
-                transfer_dst: true,
-                sampled: true,
-                ..ImageUsage::color_attachment()
-            },
-            dimensions,
-        );
+        let mut views = Vec::new();
+        for _ in 0..passes {
+            views.push(ViewImage::new(
+                queue.device().clone(),
+                ImageUsage {
+                    transfer_src: true,
+                    transfer_dst: true,
+                    storage: true,
+                    sampled: true,
+                    ..ImageUsage::color_attachment()
+                },
+                dimensions,
+            ));
+        }
 
         println!("created render target of dimensions {:?}", dimensions);
 
@@ -118,7 +124,7 @@ impl CpuRenderTarget {
             queue,
             buffer: Arc::new(RwLock::new(buffer)),
             intermediate: Arc::new(RwLock::new(intermediate)),
-            view: Arc::new(RwLock::new(view)),
+            views: Arc::new(RwLock::new(views)),
             synced: Arc::new(RwLock::new(false)),
             dimensions: Arc::new(RwLock::new(dimensions)),
         })
@@ -145,16 +151,23 @@ impl CpuRenderTarget {
             },
             new_dimensions,
         );
-        *self.view.write().unwrap() = ViewImage::new(
-            self.queue.device().clone(),
-            ImageUsage {
-                transfer_src: false,
-                transfer_dst: true,
-                sampled: true,
-                ..ImageUsage::color_attachment()
-            },
-            new_dimensions,
-        );
+
+        let passes = self.views.read().unwrap().len();
+        let mut views = Vec::new();
+        for _ in 0..passes {
+            views.push(ViewImage::new(
+                self.queue.device().clone(),
+                ImageUsage {
+                    transfer_src: true,
+                    transfer_dst: true,
+                    storage: true,
+                    sampled: true,
+                    ..ImageUsage::color_attachment()
+                },
+                new_dimensions,
+            ));
+        }
+        *self.views.write().unwrap() = views;
     }
 
     /// Assuming we can block on the buffer, try to copy it to the intermediate view
@@ -221,7 +234,8 @@ impl CpuRenderTarget {
 
     /// Assuming we can block on the view, try to copy into it from the intermediate view
     pub fn try_pull(&self) {
-        let view_write = self.view.read().unwrap();
+        let view = self.views.read().unwrap()[0].view.clone();
+        let image = self.views.read().unwrap()[0].image.clone();
         if let Ok(intermediate_read) = self.intermediate.try_read() {
             let mut builder = AutoCommandBufferBuilder::primary(
                 self.queue.device().clone(),
@@ -233,7 +247,7 @@ impl CpuRenderTarget {
             builder
                 .copy_image(CopyImageInfo::images(
                     intermediate_read.image.clone(),
-                    view_write.image.clone(),
+                    image,
                 ))
                 .unwrap();
             let command_buffer = builder.build().unwrap();
@@ -253,14 +267,18 @@ impl CpuRenderTarget {
         self.buffer.write().unwrap()
     }
 
+    pub fn get_view(&self, index: usize) -> Arc<ImageView<AttachmentImage>> {
+        self.views.read().unwrap()[index].view.clone()
+    }
+
     /// Returns the image view, copying if out of sync
-    pub fn view(&self) -> Arc<ImageView<AttachmentImage>> {
+    pub fn pull_view(&self) -> Arc<ImageView<AttachmentImage>> {
         // Should be non blocking!!!
         if !*self.synced.read().unwrap() {
             self.try_pull();
         }
 
-        self.view.read().unwrap().view()
+        self.get_view(0)
     }
 
     pub fn clear(&self) {
