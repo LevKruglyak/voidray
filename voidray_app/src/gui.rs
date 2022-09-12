@@ -7,6 +7,7 @@ use voidray_renderer::settings::RenderSettings;
 use voidray_renderer::settings::Tonemap;
 
 use crate::egui::*;
+use crate::utils::human_duration;
 use crate::widgets::FatButton;
 use crate::VoidrayEngine;
 
@@ -50,10 +51,19 @@ pub fn engine_ui(engine: &mut VoidrayEngine, context: &mut Context, api: &mut En
 
             let samples = engine.renderer.samples();
             let time = engine.renderer.elapsed_time();
+            let remaining = engine.renderer.remaining_time();
 
             ui.add_space(5.0);
+            if let Some(remaining) = remaining {
+                ui.add(ProgressBar::new(samples.0 as f32 / samples.1 as f32)
+                    .show_percentage());
+                ui.add_space(5.0);
+            }
             ui.label(format!("Samples: {}/{}", samples.0, samples.1));
-            ui.label(format!("Elapsed time: {:.4}s", time.as_secs_f32()));
+            ui.label(format!("Elapsed time: {}", human_duration(&time)));
+            if let Some(remaining) = remaining {
+                ui.label(format!("Remaining time: {}", human_duration(&remaining)));
+            }
         });
 
     SidePanel::right("right_panel")

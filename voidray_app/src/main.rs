@@ -23,6 +23,7 @@ use voidray_renderer::vulkano::render_pass::Subpass;
 
 mod gui;
 mod widgets;
+mod utils;
 
 pub struct VoidrayEngine {
     pub target: Arc<CpuRenderTarget>,
@@ -45,6 +46,7 @@ impl Engine for VoidrayEngine {
         let green = scene.add_material(Materials::metal(hex_color(0xB3E7AA), 0.1));
         let blue = scene.add_material(Materials::metal(hex_color(0x7CA3E7), 0.01));
         let grey = scene.add_material(Materials::metal(hex_color(0xAAAAAA), 0.01));
+        let diffuse = scene.add_material(Materials::lambertian(hex_color(0x7CA3E7)));
         let light_mtl = scene.add_material(Materials::colored_emissive(hex_color(0xFFFFFF), 8.0));
 
         let spheres = vec![
@@ -61,10 +63,11 @@ impl Engine for VoidrayEngine {
         }
 
         let glass_2 = scene.add_material(Materials::dielectric(1.5));
-        let sph = scene.add_analytic_surface(Surfaces::sphere(vec3!(1.5, 2.7, -3.1), 0.7));
-        let sph_inner = scene.add_analytic_surface(Surfaces::sphere(vec3!(1.5, 2.69, -3.1), -0.69));
+        let sph = scene.add_analytic_surface(Surfaces::sphere(vec3!(1.5, 0.7, -3.1), 0.7));
+        let sph_inner =
+            scene.add_analytic_surface(Surfaces::sphere(vec3!(1.5, 0.695, -3.1), 0.695));
         scene.add_object(glass_2, sph);
-        scene.add_object(glass_2, sph_inner);
+        scene.add_object(diffuse, sph_inner);
 
         let light = scene.add_analytic_surface(Surfaces::sphere(vec3!(1.2, 8.0, -1.5), 2.0));
         scene.add_object(light_mtl, light);
@@ -77,13 +80,12 @@ impl Engine for VoidrayEngine {
         );
         scene.camera.dof = Some((0.12, vec3!(0.1, 0.6, -2.0)));
 
-        let saloon_albedo =
-            scene.add_image_texture("assets/wood_albedo.tif", SampleType::Nearest);
-        let saloon_normal =
-            scene.add_image_texture("assets/wood_normal.tif", SampleType::Nearest);
+        let saloon_albedo = scene.add_image_texture("assets/wood_albedo.tif", SampleType::Bilinear);
+        let saloon_normal = scene.add_image_texture("assets/wood_normal.tif", SampleType::Nearest);
 
         let gnd = scene.add_analytic_surface(Surfaces::ground_plane(0.0));
-        let gnd_mat = scene.add_material(Materials::lambertian_texture(saloon_albedo, saloon_normal));
+        let gnd_mat =
+            scene.add_material(Materials::lambertian_texture(saloon_albedo, saloon_normal));
         scene.add_object(gnd_mat, gnd);
 
         scene.environment = Environments::hdri("assets/indoor.exr");

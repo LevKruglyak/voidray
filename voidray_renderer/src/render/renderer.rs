@@ -19,6 +19,7 @@ pub struct RendererStats {
     currently_rendering: bool,
     samples: (u32, u32),
     time: Option<(Instant, Option<Instant>)>,
+    remaining: Option<Duration>,
 }
 
 pub struct RenderThread {
@@ -47,7 +48,8 @@ impl RenderThread {
             thread_stats.write().unwrap().currently_rendering = true;
 
             // Start the timer
-            thread_stats.write().unwrap().time = Some((Instant::now(), None));
+            let start_time = Instant::now();
+            thread_stats.write().unwrap().time = Some((start_time, None));
 
             // Clear the target
             thread_target.clear();
@@ -69,9 +71,12 @@ impl RenderThread {
             // Calculate the appropriate update frequency
             let single_sample_time = Instant::now()
                 .duration_since(single_sample_time)
-                .as_secs_f64() as Float;
+                .as_secs_f64();
+            thread_stats.write().unwrap().remaining = Some(Duration::from_secs_f64(
+                single_sample_time * (total_samples - 1) as f64,
+            ));
             let mut samples_per_frame =
-                (settings.render.update_frequency / single_sample_time) as u32;
+                (settings.render.update_frequency / single_sample_time as Float) as u32;
             samples_per_frame =
                 std::cmp::min(std::cmp::max(samples_per_frame, 1), total_samples - samples);
 
@@ -87,6 +92,10 @@ impl RenderThread {
                 );
                 samples += delta_samples;
                 thread_stats.write().unwrap().samples = (samples, total_samples);
+                let elapsed = Instant::now().duration_since(start_time).as_secs_f64();
+                thread_stats.write().unwrap().remaining = Some(Duration::from_secs_f64(
+                    elapsed / samples as f64 * (total_samples - samples) as f64,
+                ));
 
                 // Process other events
                 if let Ok(action) = receiver.try_recv() {
@@ -102,6 +111,7 @@ impl RenderThread {
             let time = thread_stats.read().unwrap().time;
             thread_stats.write().unwrap().time =
                 time.map(|(start, _)| (start, Some(Instant::now())));
+            thread_stats.write().unwrap().remaining = None;
         });
 
         Self {
@@ -174,6 +184,7 @@ impl Renderer {
             currently_rendering: false,
             samples: (0, 0),
             time: None,
+            remaining: None,
         };
 
         Self {
@@ -239,5 +250,9 @@ impl Renderer {
         }
 
         Duration::default()
+    }
+
+    pub fn remaining_time(&self) -> Option<Duration> {
+        self.stats.read().unwrap().remaining
     }
 }
