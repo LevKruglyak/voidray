@@ -2,7 +2,7 @@
 
 High performance, interactive, physically based Rust path tracer.
 
-<img width="1490" alt="Screen Shot 2022-09-12 at 1 23 30 AM" src="https://user-images.githubusercontent.com/13054020/189579542-d5aaa2cc-8555-42d0-8331-c90b993f8ec5.png">
+<img width="1495" alt="Screen Shot 2022-09-12 at 2 48 38 AM" src="https://user-images.githubusercontent.com/13054020/189590689-e3983a4a-fb25-451a-bcd8-ef69614706da.png">
 
 ## Features
 
