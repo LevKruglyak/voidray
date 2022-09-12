@@ -4,6 +4,7 @@ mod environments;
 mod microfacet;
 pub mod simple;
 mod surfaces;
+pub mod sdf;
 
 pub use environments::Environments;
 pub use microfacet::MicrofacetBSDF;

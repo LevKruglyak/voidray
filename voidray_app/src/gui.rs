@@ -1,10 +1,13 @@
 use voidray_launcher::Engine;
 use voidray_launcher::EngineApi;
+use voidray_renderer::camera::Camera;
 use voidray_renderer::render::renderer::RenderAction;
 use voidray_renderer::settings::ColorManagementSettings;
 use voidray_renderer::settings::RenderMode;
 use voidray_renderer::settings::RenderSettings;
 use voidray_renderer::settings::Tonemap;
+use voidray_renderer::vector::PI;
+use voidray_renderer::vector::Vec3;
 
 use crate::egui::*;
 use crate::utils::human_duration;
@@ -69,7 +72,84 @@ pub fn engine_ui(engine: &mut VoidrayEngine, context: &mut Context, api: &mut En
     SidePanel::right("right_panel")
         .min_width(250.0)
         .resizable(false)
-        .show(context, |ui| {});
+        .show(context, |ui| {
+            let mut modified = false;
+            engine.scene.write().unwrap().camera.display_ui(ui, &mut modified, true);
+        });
+}
+
+impl Editable for Camera {
+    fn display_ui(&mut self, ui: &mut Ui, modified: &mut bool, enabled: bool) {
+        CollapsingHeader::new("Camera")
+            .default_open(true)
+            .show(ui, |ui| {
+                ui.add_enabled_ui(enabled, |ui| {
+                    Grid::new("render_settings")
+                        .num_columns(2)
+                        .spacing([10.0, 4.0])
+                        .max_col_width(80.0)
+                        .min_col_width(140.0)
+                        .striped(true)
+                        .show(ui, |ui| {
+                            ui.label("Position:");
+                            self.eye.display_ui(ui, modified, true);
+                            ui.end_row();
+                            ui.label("Direction:");
+                            self.direction.display_ui(ui, modified, true);
+                            ui.end_row();
+                            ui.label("Up:");
+                            self.up.display_ui(ui, modified, true);
+                            ui.end_row();
+
+                            ui.label("Fov:");
+                            ui.add(
+                                DragValue::new(&mut self.fov)
+                                    .fixed_decimals(2)
+                                    .clamp_range(0.0..=PI)
+                                    .speed(0.01)
+                            );
+                            ui.end_row();
+                            
+                            if let Some(mut dof) = self.dof {
+                                ui.label("Focal length:");
+                                ui.add(
+                                    DragValue::new(&mut dof.0)
+                                        .fixed_decimals(2)
+                                        .speed(0.1)
+                                );
+                                ui.end_row();
+                                ui.label("Focal point:");
+                                dof.1.display_ui(ui, modified, true);
+                                ui.end_row();
+                                self.dof = Some(dof);
+                            }
+                        });
+                });
+            });
+        ui.add_space(15.0);
+    }
+}
+
+impl Editable for Vec3 {
+    fn display_ui(&mut self, ui: &mut Ui, modified: &mut bool, enabled: bool) {
+        ui.horizontal(|ui| {
+            ui.add(
+                DragValue::new(&mut self.x)
+                    .fixed_decimals(2)
+                    .speed(0.1)
+            );
+            ui.add(
+                DragValue::new(&mut self.y)
+                    .fixed_decimals(2)
+                    .speed(0.1)
+            );
+            ui.add(
+                DragValue::new(&mut self.z)
+                    .fixed_decimals(2)
+                    .speed(0.1)
+            );
+        });
+    }
 }
 
 impl Editable for RenderSettings {

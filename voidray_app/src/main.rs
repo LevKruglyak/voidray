@@ -38,7 +38,7 @@ impl Engine for VoidrayEngine {
 
     fn init(context: &mut EngineContext<Self::Gui>) -> Self {
         let api = context.api();
-        let target = CpuRenderTarget::new(api.compute_queue(), 2, [1000, 1000]);
+        let target = CpuRenderTarget::new(api.compute_queue(), 2, [500, 500]);
         let mut scene = Scene::empty();
 
         let red = scene.add_material(Materials::metal(hex_color(0xE78999), 0.05));
@@ -47,7 +47,7 @@ impl Engine for VoidrayEngine {
         let blue = scene.add_material(Materials::metal(hex_color(0x7CA3E7), 0.01));
         let grey = scene.add_material(Materials::metal(hex_color(0xAAAAAA), 0.01));
         let diffuse = scene.add_material(Materials::lambertian(hex_color(0x7CA3E7)));
-        let light_mtl = scene.add_material(Materials::colored_emissive(hex_color(0xFFFFFF), 8.0));
+        let light_mtl = scene.add_material(Materials::colored_emissive(hex_color(0xFF0F0F), 200.0));
 
         let spheres = vec![
             (vec3!(0.5, 1.0, 4.0), red),
