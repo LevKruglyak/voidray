@@ -288,4 +288,12 @@ impl CpuRenderTarget {
             .for_each(|x| *x = 0.0);
         self.try_push();
     }
+
+    pub fn force_clear(&self) {
+        self.buffer()
+            .as_slice_mut()
+            .iter_mut()
+            .for_each(|x| *x = 0.0);
+        self.push();
+    }
 }

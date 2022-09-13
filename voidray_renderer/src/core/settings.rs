@@ -25,7 +25,7 @@ impl Default for RenderSettings {
     fn default() -> Self {
         Self {
             total_samples: 100,
-            update_frequency: 0.5,
+            update_frequency: 0.1,
             render_mode: RenderMode::Full,
             firefly_clamp: 3.0,
             max_bounces: 10,
