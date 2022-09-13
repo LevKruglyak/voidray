@@ -5,17 +5,8 @@ pub mod graphics;
 pub mod render;
 mod util;
 
-pub use crate::core::camera;
-pub use crate::core::scene;
-pub use crate::core::settings;
-pub use crate::core::texture;
-pub use crate::core::traits;
-
-pub use util::aabb;
-pub use util::color;
-pub use util::math;
-pub use util::ray;
-pub use util::vector;
+pub use crate::core::*;
+pub use util::*;
 
 /// Std rand imports
 pub mod rand {

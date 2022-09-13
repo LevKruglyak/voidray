@@ -1,6 +1,7 @@
 use super::camera::{Camera, CameraAcceleration};
 use super::texture::{ImageTexture, SampleType, Texture};
 use crate::core::traits::*;
+use crate::mesh::Mesh;
 use crate::preamble::*;
 use crate::ray::*;
 
@@ -35,6 +36,7 @@ pub struct Scene {
     pub textures: Vec<Named<Arc<Texture>>>,
     pub objects: Vec<Named<Object>>,
     pub surfaces: Vec<Named<Surface>>,
+    pub meshes: Vec<Arc<Mesh>>,
     pub materials: Vec<Named<Arc<dyn Material>>>,
     pub environment: Option<Arc<dyn Environment>>,
 }
@@ -51,28 +53,19 @@ pub struct SurfaceHandle(usize);
 #[derive(Clone, Copy)]
 pub struct TextureHandle(usize);
 
+#[derive(Clone, Copy)]
+pub struct MeshHandle(usize);
+
 pub struct SceneAcceleration {
     pub camera: CameraAcceleration,
     pub environment: Option<Arc<dyn Environment>>,
     objects: Vec<Object>,
     surfaces: Vec<Surface>,
     textures: Vec<Arc<Texture>>,
+    meshes: Vec<Arc<Mesh>>,
     materials: Vec<Arc<dyn Material>>,
 }
 
-// let mut result = None;
-// let mut closest_so_far = Float::INFINITY;
-//
-// for object in &scene.objects {
-//     let shape = scene.shape_ref(object.shape);
-//     if let Some(hit) = match shape {
-//         Shape::Analytic(hittable) => hittable.hit(ray, T_MIN, closest_so_far),
-//         Shape::Mesh(handle) => scene.mesh_ref(*handle).hit(ray, T_MIN, closest_so_far),
-//     } {
-//         closest_so_far = hit.t;
-//         result = Some((hit, object));
-//     }
-// }
 impl Scene {
     pub fn empty() -> Self {
         Self {
@@ -86,6 +79,7 @@ impl Scene {
             objects: Vec::new(),
             surfaces: Vec::new(),
             textures: Vec::new(),
+            meshes: Vec::new(),
             environment: None,
         }
     }
@@ -106,11 +100,14 @@ impl Scene {
         SurfaceHandle(self.surfaces.len() - 1)
     }
 
-    // pub fn add_mesh(&mut self, mesh: Arc<Mesh>) -> ShapeHandle {
-    //     self.meshes.push(mesh);
-    //     self.shapes.push(Shape::Mesh(self.meshes.len() - 1));
-    //     self.shapes.len() - 1
-    // }
+    pub fn add_mesh(&mut self, mesh: Arc<Mesh>) -> SurfaceHandle {
+        self.meshes.push(mesh);
+        self.surfaces.push(Named {
+            object: Surface::Mesh(MeshHandle(self.meshes.len() - 1)),
+            name: format!("mesh_{}", self.surfaces.len()),
+        });
+        SurfaceHandle(self.surfaces.len() - 1)
+    }
 
     pub fn add_object(&mut self, material: MaterialHandle, surface: SurfaceHandle) -> ObjectHandle {
         self.objects.push(Named {
@@ -137,6 +134,7 @@ impl Accelerable<SceneAcceleration> for Scene {
             surfaces: self.surfaces.build_acceleration(),
             materials: self.materials.build_acceleration(),
             textures: self.textures.build_acceleration(),
+            meshes: self.meshes.clone(),
             environment: self.environment.clone(),
         }
     }
@@ -154,6 +152,7 @@ impl SceneAcceleration {
             let surface = self.surface_ref(object.surface);
             if let Some(hit) = match surface {
                 Surface::Analytic(analytic) => analytic.hit(ray, t_min, closest),
+                &Surface::Mesh(handle) => self.mesh_ref(handle).hit(ray, t_min, closest), 
             } {
                 closest = hit.t;
                 result = Some((hit, object));
@@ -173,5 +172,9 @@ impl SceneAcceleration {
 
     pub fn texture_ref(&self, texture_handle: TextureHandle) -> &Texture {
         self.textures[texture_handle.0].as_ref()
+    }
+
+    pub fn mesh_ref(&self, mesh_handle: MeshHandle) -> &Mesh {
+        self.meshes[mesh_handle.0].as_ref()
     }
 }

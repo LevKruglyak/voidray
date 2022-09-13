@@ -3,6 +3,7 @@ use crate::color::*;
 use crate::preamble::*;
 use crate::rand::*;
 use crate::ray::*;
+use crate::scene::MeshHandle;
 use crate::scene::SceneAcceleration;
 
 // /// BSDF material trait
@@ -33,6 +34,7 @@ pub trait AnalyticSurface: Bounded + Send + Sync {
 #[derive(Clone)]
 pub enum Surface {
     Analytic(Arc<dyn AnalyticSurface>),
+    Mesh(MeshHandle)
 }
 
 /// A background environment for the scene, describing the behaviour of escaped rays
