@@ -12,6 +12,8 @@ use voidray_renderer::vector::Vec3;
 use voidray_renderer::vector::PI;
 
 use crate::egui::*;
+use crate::examples::cornell;
+use crate::examples::mushroom;
 use crate::examples::spheres;
 use crate::utils::human_duration;
 use crate::widgets::FatButton;
@@ -36,6 +38,8 @@ pub trait Editable {
 pub enum DemoScene {
     None,
     Spheres,
+    Cornell,
+    Mushroom,
 }
 
 pub fn engine_ui(engine: &mut VoidrayEngine, context: &mut Context, api: &mut EngineApi) {
@@ -142,7 +146,16 @@ pub fn engine_ui(engine: &mut VoidrayEngine, context: &mut Context, api: &mut En
                             DemoScene::Spheres,
                             "Spheres",
                         );
-
+                        ui.selectable_value(
+                            &mut engine.state.demo,
+                            DemoScene::Cornell,
+                            "Cornell",
+                        );
+                        ui.selectable_value(
+                            &mut engine.state.demo,
+                            DemoScene::Mushroom,
+                            "Mushroom",
+                        );
                     });
                     ui.end_row();
                     ui.end_row();
@@ -160,6 +173,8 @@ pub fn engine_ui(engine: &mut VoidrayEngine, context: &mut Context, api: &mut En
                                     let (scene, settings, dimensions) = match engine.state.demo {
                                         DemoScene::None => (Scene::empty(), Settings::default(), [1000, 1000]),
                                         DemoScene::Spheres => spheres::scene(),
+                                        DemoScene::Cornell => cornell::scene(),
+                                        DemoScene::Mushroom => mushroom::scene(),
                                     };
 
                                     *engine.scene.write().unwrap() = scene;

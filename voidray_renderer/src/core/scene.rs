@@ -1,5 +1,7 @@
 use super::camera::{Camera, CameraAcceleration};
 use super::texture::{ImageTexture, SampleType, Texture};
+use crate::aabb::{AABB, Bounded};
+use crate::bvh::{BvhNode, BoundsCollection};
 use crate::core::traits::*;
 use crate::mesh::Mesh;
 use crate::preamble::*;
@@ -59,11 +61,34 @@ pub struct MeshHandle(usize);
 pub struct SceneAcceleration {
     pub camera: CameraAcceleration,
     pub environment: Option<Arc<dyn Environment>>,
+    bvh: BvhNode,
     objects: Vec<Object>,
     surfaces: Vec<Surface>,
     textures: Vec<Arc<Texture>>,
     meshes: Vec<Arc<Mesh>>,
     materials: Vec<Arc<dyn Material>>,
+}
+
+impl BoundsCollection for SceneAcceleration {
+    fn bounds_ref(&self, handle: usize) -> AABB {
+        let surface = self.surface_ref(SurfaceHandle(handle));
+
+        match surface {
+            Surface::Mesh(handle) => self.mesh_ref(*handle).bounds(),
+            Surface::Analytic(surface) => surface.bounds(),
+        }
+    }
+
+    fn hit(&self, handle: usize, ray: &Ray, t_min: Float, t_max: Float) -> Option<HitRecord> {
+        match self.surface_ref(SurfaceHandle(handle)) {
+            &Surface::Mesh(handle) => self.mesh_ref(handle).hit(ray, t_min, t_max),
+            Surface::Analytic(surface) => surface.hit(ray, t_min, t_max),
+        }
+    }
+
+    fn objects(&self) -> Vec<usize> {
+        (0..self.surfaces.len()).collect()
+    }
 }
 
 impl Scene {
@@ -109,6 +134,15 @@ impl Scene {
         SurfaceHandle(self.surfaces.len() - 1)
     }
 
+    pub fn add_mesh_from_file(&mut self, path: &str) -> SurfaceHandle {
+        self.meshes.push(Arc::new(Mesh::from_file(path)));
+        self.surfaces.push(Named {
+            object: Surface::Mesh(MeshHandle(self.meshes.len() - 1)),
+            name: format!("mesh_{}", self.surfaces.len()),
+        });
+        SurfaceHandle(self.surfaces.len() - 1)
+    }
+
     pub fn add_object(&mut self, material: MaterialHandle, surface: SurfaceHandle) -> ObjectHandle {
         self.objects.push(Named {
             object: Object { surface, material },
@@ -128,38 +162,46 @@ impl Scene {
 
 impl Accelerable<SceneAcceleration> for Scene {
     fn build_acceleration(&self) -> SceneAcceleration {
-        SceneAcceleration {
+        let mut scene_accel = SceneAcceleration {
             camera: self.camera.build_acceleration(),
             objects: self.objects.build_acceleration(),
             surfaces: self.surfaces.build_acceleration(),
             materials: self.materials.build_acceleration(),
             textures: self.textures.build_acceleration(),
             meshes: self.meshes.clone(),
+            bvh: BvhNode::None,
             environment: self.environment.clone(),
-        }
+        };
+
+        scene_accel.bvh = BvhNode::from_list(&mut scene_accel.objects(), &scene_accel);
+        scene_accel
     }
 }
 
 impl SceneAcceleration {
     pub fn hit(&self, ray: &Ray) -> Option<(HitRecord, &Object)> {
-        let mut result = None;
+        self.bvh.hit(ray, 0.00001, INF, self).map(|(hit, handle)| {
+            (hit, self.object_ref(ObjectHandle(handle)))
+        })
 
-        let t_min = 0.00001;
-        let mut closest = INF;
-
-        // Simple implementation
-        for object in &self.objects {
-            let surface = self.surface_ref(object.surface);
-            if let Some(hit) = match surface {
-                Surface::Analytic(analytic) => analytic.hit(ray, t_min, closest),
-                &Surface::Mesh(handle) => self.mesh_ref(handle).hit(ray, t_min, closest), 
-            } {
-                closest = hit.t;
-                result = Some((hit, object));
-            }
-        }
-
-        result
+        // let mut result = None;
+        //
+        // let t_min = 0.00001;
+        // let mut closest = INF;
+        //
+        // // Simple implementation
+        // for object in &self.objects {
+        //     let surface = self.surface_ref(object.surface);
+        //     if let Some(hit) = match surface {
+        //         Surface::Analytic(analytic) => analytic.hit(ray, t_min, closest),
+        //         &Surface::Mesh(handle) => self.mesh_ref(handle).hit(ray, t_min, closest), 
+        //     } {
+        //         closest = hit.t;
+        //         result = Some((hit, object));
+        //     }
+        // }
+        //
+        // result
     }
 
     pub fn surface_ref(&self, surface_handle: SurfaceHandle) -> &Surface {
@@ -176,5 +218,9 @@ impl SceneAcceleration {
 
     pub fn mesh_ref(&self, mesh_handle: MeshHandle) -> &Mesh {
         self.meshes[mesh_handle.0].as_ref()
+    }
+
+    pub fn object_ref(&self, object_handle: ObjectHandle) -> &Object {
+        &self.objects[object_handle.0]
     }
 }

@@ -80,8 +80,8 @@ impl ImageTexture {
 
 impl AbstractTexture for ImageTexture {
     fn sample(&self, mut u: Float, mut v: Float) -> Color {
-        u *= 0.3;
-        v *= 0.3;
+        // u *= 0.3;
+        // v *= 0.3;
         if u < 0.0 {
             u -= u.trunc() - 1.0;
         }
@@ -89,7 +89,7 @@ impl AbstractTexture for ImageTexture {
             v -= v.trunc() - 1.0;
         }
         let x = (u % 1.0) * (self.width as Float);
-        let y = (v % 1.0) * (self.height as Float);
+        let y = (1.0 - v % 1.0) * (self.height as Float);
 
         match self.sample_type {
             SampleType::Nearest => self.nearest_sample(x, y),

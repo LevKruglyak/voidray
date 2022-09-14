@@ -10,7 +10,7 @@ pub struct BvhTree<'s, S> {
 
 pub trait BoundsCollection: Sync {
     fn hit(&self, handle: usize, ray: &Ray, t_min: Float, t_max: Float) -> Option<HitRecord>;
-    fn bounds(&self, handle: usize) -> AABB;
+    fn bounds_ref(&self, handle: usize) -> AABB;
     fn objects(&self) -> Vec<usize>;
 }
 
@@ -56,14 +56,14 @@ impl BvhNode {
                 // Calculate bounds for the whole node
                 let bounds = objects
                     .iter()
-                    .map(|object| scene.bounds(*object))
+                    .map(|object| scene.bounds_ref(*object))
                     .reduce(AABB::surround)
                     .unwrap_or_default();
 
                 // See which axis has the greatest variance among centroids
                 let centroids = objects
                     .iter()
-                    .map(|object| AABB::from_point(scene.bounds(*object).centroid()))
+                    .map(|object| AABB::from_point(scene.bounds_ref(*object).centroid()))
                     .reduce(AABB::surround)
                     .unwrap_or_default();
 
@@ -81,31 +81,28 @@ impl BvhNode {
                     Axis::X => {
                         objects.sort_by(|a, b| {
                             scene
-                                .bounds(*a)
+                                .bounds_ref(*a)
                                 .centroid()
                                 .x
-                                .partial_cmp(&scene.bounds(*b).centroid().x)
-                                .unwrap()
+                                .total_cmp(&scene.bounds_ref(*b).centroid().x)
                         });
                     }
                     Axis::Y => {
                         objects.sort_by(|a, b| {
                             scene
-                                .bounds(*a)
+                                .bounds_ref(*a)
                                 .centroid()
                                 .y
-                                .partial_cmp(&scene.bounds(*b).centroid().y)
-                                .unwrap()
+                                .total_cmp(&scene.bounds_ref(*b).centroid().y)
                         });
                     }
                     Axis::Z => {
                         objects.sort_by(|a, b| {
                             scene
-                                .bounds(*a)
+                                .bounds_ref(*a)
                                 .centroid()
                                 .z
-                                .partial_cmp(&scene.bounds(*b).centroid().z)
-                                .unwrap()
+                                .total_cmp(&scene.bounds_ref(*b).centroid().z)
                         });
                     }
                 }

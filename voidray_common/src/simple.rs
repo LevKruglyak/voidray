@@ -42,11 +42,11 @@ impl Materials {
     //         transparency,
     //     ))
     // }
-    //
-    // pub fn emissive(strength: Float) -> Arc<dyn Material> {
-    //     Arc::new(Emission::new(Color::new(1.0, 1.0, 1.0), strength))
-    // }
-    //
+
+    pub fn emissive(strength: Float) -> Arc<dyn Material> {
+        Arc::new(Emission::new(Color::new(1.0, 1.0, 1.0), strength))
+    }
+    
     pub fn colored_emissive(color: Color, strength: Float) -> Arc<dyn Material> {
         Arc::new(Emission::new(color, strength))
     }

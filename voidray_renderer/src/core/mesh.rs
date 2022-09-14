@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::BufReader;
 
+use crate::vec3;
 use crate::vector::*;
 use crate::aabb::*;
 use crate::ray::*;
@@ -17,7 +18,14 @@ pub struct Triangle {
 #[derive(Debug)]
 pub struct Vertex {
     position: Vec3,
+    uv: Vec2,
     normal: Vec3,
+}
+
+impl Vertex {
+    pub fn position(position: Vec3) -> Vertex {
+        Vertex { position, uv: Vec2::new(0.0, 0.0), normal: vec3!(0.0) }
+    }
 }
 
 pub struct Mesh {
@@ -32,7 +40,7 @@ static SMALL_MESH: usize = 4;
 
 impl Mesh {
     pub fn from_file(path: &str) -> Self {
-        let obj: Obj<obj::Vertex, u32> =
+        let obj: Obj<obj::TexturedVertex, u32> =
             load_obj(BufReader::new(File::open(path).unwrap())).unwrap();
         let mut vertices: Vec<Vertex> = Vec::new();
 
@@ -42,6 +50,10 @@ impl Mesh {
                     vertex.position[0] as Float,
                     vertex.position[1] as Float,
                     vertex.position[2] as Float,
+                ),
+                uv: Vec2::new(
+                    vertex.texture[0] as Float,
+                    vertex.texture[1] as Float,
                 ),
                 normal: Vec3::new(
                     vertex.normal[0] as Float,
@@ -107,7 +119,7 @@ impl Mesh {
     }
 
     pub fn hit(&self, ray: &Ray, t_min: Float, t_max: Float) -> Option<HitRecord> {
-        if self.bvh_root == BvhNode::None {
+        if self.bvh_root != BvhNode::None {
             self.bvh_root.hit(ray, t_min, t_max, self).map(|a| a.0)
         } else {
             let mut result = None;
@@ -161,13 +173,14 @@ impl Triangle {
 
         let t = f * e2.dot(q);
         let mut normal = u * v1.normal + v * v2.normal + (1.0 - u - v) * v0.normal;
+        let uv = u * v1.uv + v * v2.uv + (1.0 - u - v) * v0.uv;
 
-        if normal.angle(self.normal).0 > degrees_to_radians(0.0) {
+        if normal.angle(self.normal).0 > degrees_to_radians(30.0) {
             normal = self.normal;
         }
 
         if t > tmin {
-            Some(HitRecord::new(ray.at(t), normal, t, Vec2::new(0.0, 0.0), ray))
+            Some(HitRecord::new(ray.at(t), normal, t, uv, ray))
         } else {
             None
         }
@@ -176,7 +189,7 @@ impl Triangle {
 
 /// Make it possible to create Bvh tree for mesh
 impl BoundsCollection for Mesh {
-    fn bounds(&self, handle: usize) -> AABB {
+    fn bounds_ref(&self, handle: usize) -> AABB {
         let triangle = &self.triangles[handle as usize];
         AABB::epsilon_expand(
             AABB::surround(
@@ -186,7 +199,7 @@ impl BoundsCollection for Mesh {
                     AABB::from_point(self.vertices[triangle.vertices[2] as usize].position),
                 ),
             ),
-            0.01,
+            0.001,
         )
     }
 

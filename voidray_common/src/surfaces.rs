@@ -1,4 +1,5 @@
 use voidray_renderer::aabb::*;
+use voidray_renderer::mesh::{Mesh, Vertex};
 use voidray_renderer::preamble::*;
 use voidray_renderer::ray::*;
 use voidray_renderer::traits::*;
@@ -12,6 +13,18 @@ impl Surfaces {
 
     pub fn ground_plane(height: Float) -> Arc<dyn AnalyticSurface> {
         Arc::new(GroundPlane { height })
+    }
+
+    pub fn quad(q1: Vec3, q2: Vec3, q3: Vec3, q4: Vec3) -> Arc<Mesh> {
+        let vertices = vec![
+            Vertex::position(q1),
+            Vertex::position(q2),
+            Vertex::position(q3),
+            Vertex::position(q4),
+        ];
+        let indices = vec![0, 1, 2, 2, 0, 3,];
+        
+        Arc::new(Mesh::from_buffers(vertices, indices))
     }
 }
 
@@ -80,10 +93,6 @@ impl AnalyticSurface for GroundPlane {
 
         let world_pos = ray.at(t);
         let uv = Vec2::new(world_pos.x, world_pos.z);
-
-        if uv.magnitude2() >= 150.0 {
-            return None;
-        }
 
         Some(HitRecord::new(
             world_pos,

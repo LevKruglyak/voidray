@@ -1,13 +1,4 @@
-use voidray_common::simple::Materials;
-use voidray_common::Environments;
-use voidray_common::Surfaces;
-use voidray_renderer::camera::Camera;
-use voidray_renderer::color::*;
-use voidray_renderer::preamble::*;
-use voidray_renderer::scene::Scene;
-use voidray_renderer::settings::Settings;
-use voidray_renderer::settings::Tonemap;
-use voidray_renderer::texture::SampleType;
+use crate::examples::example_import::*;
 
 pub fn scene() -> (Scene, Settings, [u32; 2]) {
     let mut scene = Scene::empty();
