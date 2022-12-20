@@ -15,3 +15,4 @@ pub mod example_import {
 pub mod spheres;
 pub mod cornell;
 pub mod mushroom;
+pub mod material;

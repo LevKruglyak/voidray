@@ -13,6 +13,7 @@ use voidray_renderer::vector::PI;
 
 use crate::egui::*;
 use crate::examples::cornell;
+use crate::examples::material;
 use crate::examples::mushroom;
 use crate::examples::spheres;
 use crate::utils::human_duration;
@@ -40,6 +41,7 @@ pub enum DemoScene {
     Spheres,
     Cornell,
     Mushroom,
+    Material,
 }
 
 pub fn engine_ui(engine: &mut VoidrayEngine, context: &mut Context, api: &mut EngineApi) {
@@ -156,6 +158,11 @@ pub fn engine_ui(engine: &mut VoidrayEngine, context: &mut Context, api: &mut En
                             DemoScene::Mushroom,
                             "Mushroom",
                         );
+                        ui.selectable_value(
+                            &mut engine.state.demo,
+                            DemoScene::Material,
+                            "Material",
+                        );
                     });
                     ui.end_row();
                     ui.end_row();
@@ -175,6 +182,7 @@ pub fn engine_ui(engine: &mut VoidrayEngine, context: &mut Context, api: &mut En
                                         DemoScene::Spheres => spheres::scene(),
                                         DemoScene::Cornell => cornell::scene(),
                                         DemoScene::Mushroom => mushroom::scene(),
+                                        DemoScene::Material => material::scene(),
                                     };
 
                                     *engine.scene.write().unwrap() = scene;

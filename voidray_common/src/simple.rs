@@ -20,6 +20,13 @@ impl Materials {
         })
     }
 
+    pub fn lambertian_texture_no_normal(albedo: TextureHandle) -> Arc<dyn Material> {
+        Arc::new(Lambertian {
+            albedo: ColorType::Texture(albedo),
+            normal: None,
+        })
+    }
+
     pub fn lambertian_texture(albedo: TextureHandle, normal: TextureHandle) -> Arc<dyn Material> {
         Arc::new(Lambertian {
             albedo: ColorType::Texture(albedo),
