@@ -13,6 +13,7 @@ use voidray_renderer::settings::Settings;
 use voidray_renderer::vulkano::command_buffer::{
     AutoCommandBufferBuilder, PrimaryAutoCommandBuffer,
 };
+use voidray_renderer::vulkano::device::Features;
 use voidray_renderer::vulkano::pipeline::graphics;
 use voidray_renderer::vulkano::render_pass::Subpass;
 
@@ -95,7 +96,7 @@ fn main() {
             title: "Voidray Engine",
             dimensions: LogicalSize::new(1500, 1000),
         },
-        ..EngineOptions::default()
+        ..Default::default()
     };
 
     EngineLauncher::<VoidrayEngine>::run(options);

@@ -1,13 +1,13 @@
 use std::fs::File;
 use std::io::BufReader;
 
+use crate::aabb::*;
+use crate::bvh::*;
+use crate::math::*;
+use crate::ray::*;
 use crate::vec3;
 use crate::vector::*;
-use crate::aabb::*;
-use crate::ray::*;
-use crate::math::*;
 use obj::*;
-use crate::bvh::*;
 
 #[derive(Debug)]
 pub struct Triangle {
@@ -24,7 +24,11 @@ pub struct Vertex {
 
 impl Vertex {
     pub fn position(position: Vec3) -> Vertex {
-        Vertex { position, uv: Vec2::new(0.0, 0.0), normal: vec3!(0.0) }
+        Vertex {
+            position,
+            uv: Vec2::new(0.0, 0.0),
+            normal: vec3!(0.0),
+        }
     }
 }
 
@@ -51,10 +55,7 @@ impl Mesh {
                     vertex.position[1] as Float,
                     vertex.position[2] as Float,
                 ),
-                uv: Vec2::new(
-                    vertex.texture[0] as Float,
-                    vertex.texture[1] as Float,
-                ),
+                uv: Vec2::new(vertex.texture[0] as Float, vertex.texture[1] as Float),
                 normal: Vec3::new(
                     vertex.normal[0] as Float,
                     vertex.normal[1] as Float,
@@ -126,12 +127,12 @@ impl Mesh {
             let mut closest_so_far = t_max;
 
             for triangle in &self.triangles {
-               if let Some(hit) = triangle.hit(ray, t_min, closest_so_far, self) {
-                   if closest_so_far > hit.t {
-                       closest_so_far = hit.t;
-                       result = Some(hit);
-                   }
-               }
+                if let Some(hit) = triangle.hit(ray, t_min, closest_so_far, self) {
+                    if closest_so_far > hit.t {
+                        closest_so_far = hit.t;
+                        result = Some(hit);
+                    }
+                }
             }
 
             result

@@ -11,13 +11,17 @@ pub fn scene() -> (Scene, Settings, [u32; 2]) {
 
     scene.add_object(ground_mat, ground);
 
-    let material_stand = scene.add_mesh_from_file("assets/material_testing_stand.obj");
-    let stand_mtl = scene.add_material(Materials::lambertian(hex_color(0x0F0F0F)));
-    scene.add_object(stand_mtl, material_stand);
+    let sphere = scene.add_analytic_surface(Surfaces::sphere(vec3!(0.0, 0.5, 0.0), 0.5));
+    let sphere_mat = scene.add_material(Materials::metal(hex_color(0xFFFFFF), 0.01));
+    let sphere = scene.add_object(sphere_mat, sphere);
 
-    let material_main = scene.add_mesh_from_file("assets/material_testing_main.obj");
-    let main_mtl = scene.add_material(Materials::lambertian(hex_color(0xFF0F0F)));
-    scene.add_object(main_mtl, material_main);
+    // let material_stand = scene.add_mesh_from_file("assets/material_testing_stand.obj");
+    // let stand_mtl = scene.add_material(Materials::lambertian(hex_color(0x0F0F0F)));
+    // scene.add_object(stand_mtl, material_stand);
+    //
+    // let material_main = scene.add_mesh_from_file("assets/material_testing_main.obj");
+    // let main_mtl = scene.add_material(Materials::lambertian(hex_color(0xFF0F0F)));
+    // scene.add_object(main_mtl, material_main);
 
     scene.camera.eye = vec3!(0.5, 0.6, 5.0);
 
