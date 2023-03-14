@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use voidray_renderer::aabb::AABB;
+use voidray_renderer::cgmath::Rad;
 use voidray_renderer::color::*;
 use voidray_renderer::math::{near_zero, reflect, refract};
 use voidray_renderer::rand::rand_distr::UnitSphere;
@@ -7,7 +9,7 @@ use voidray_renderer::rand::{Rng, ThreadRng};
 use voidray_renderer::ray::*;
 use voidray_renderer::scene::{SceneAcceleration, TextureHandle};
 use voidray_renderer::texture::AbstractTexture;
-use voidray_renderer::traits::Material;
+use voidray_renderer::traits::{BSDFMaterial, Material};
 use voidray_renderer::vector::*;
 
 pub struct Materials {}
@@ -18,6 +20,10 @@ impl Materials {
             albedo: ColorType::Color(albedo),
             normal: None,
         })
+    }
+
+    pub fn lambertian_bsdf(albedo: Color) -> Arc<dyn Material> {
+        Arc::new(LambertianBSDF { albedo })
     }
 
     pub fn lambertian_texture_no_normal(albedo: TextureHandle) -> Arc<dyn Material> {
@@ -41,34 +47,37 @@ impl Materials {
     pub fn dielectric(ir: Float) -> Arc<dyn Material> {
         Arc::new(Dielectric { ir })
     }
-    //
-    // pub fn colored_dielectric(color: Color, ir: Float, transparency: Float) -> Arc<dyn Material> {
-    //     Arc::new(MixMaterial::new(
-    //         Box::new(Lambertian::new(color)),
-    //         Box::new(Dielectric::new(ir)),
-    //         transparency,
-    //     ))
-    // }
 
     pub fn emissive(strength: Float) -> Arc<dyn Material> {
         Arc::new(Emission::new(Color::new(1.0, 1.0, 1.0), strength))
     }
-    
+
     pub fn colored_emissive(color: Color, strength: Float) -> Arc<dyn Material> {
         Arc::new(Emission::new(color, strength))
     }
-    //
-    // pub fn diffuse_glossy(
-    //     color: Color,
-    //     roughness: Float,
-    //     reflectiveness: Float,
-    // ) -> Arc<dyn Material> {
-    //     Arc::new(MixMaterial::new(
-    //         Box::new(Lambertian::new(color)),
-    //         Box::new(Metal::new(Color::new(1.0, 1.0, 1.0), roughness)),
-    //         reflectiveness,
-    //     ))
-    // }
+}
+
+pub struct LambertianBSDF {
+    albedo: Color,
+}
+
+impl BSDFMaterial for LambertianBSDF {
+    fn bsdf(&self, normal: &Vec3, to_viewer: &Vec3, to_incident: &Vec3) -> Color {
+        self.albedo / PI
+    }
+
+    fn sample(
+        &self,
+        normal: &Vec3,
+        to_viewer: &Vec3,
+        rng: &mut ThreadRng,
+    ) -> Option<(Vec3, Float)> {
+        assert!(normal.magnitude2() != 0.0);
+        loop {
+            let dir = Vec3::from(rng.sample(UnitSphere));
+            return Some((dir.normalize(), 1.0));
+        }
+    }
 }
 
 pub enum ColorType {
@@ -137,15 +146,16 @@ impl Material for Metal {
         rng: &mut ThreadRng,
     ) -> (Color, Option<Ray>) {
         let reflected = reflect(ray.direction, hit.normal).normalize();
-        let scattered = Ray::new(
-            hit.point,
-            reflected + self.fuzz * Vec3::from(rng.sample(UnitSphere)),
-        );
 
-        if scattered.direction.dot(hit.normal) > 0.0 {
-            (self.albedo, Some(scattered))
-        } else {
-            (BLACK, None)
+        loop {
+            let scattered = Ray::new(
+                hit.point,
+                reflected + self.fuzz * Vec3::from(rng.sample(UnitSphere)),
+            );
+
+            if scattered.direction.dot(hit.normal) > 0.0 {
+                return (self.albedo, Some(scattered));
+            }
         }
     }
 }

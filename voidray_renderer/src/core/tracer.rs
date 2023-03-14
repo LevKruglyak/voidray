@@ -37,7 +37,7 @@ fn trace_ray_internal(
                 // Different render modes
                 let (attenuation, scattered) = match settings.render_mode {
                     RenderMode::Full => material.scatter(scene, ray, &hit, rng),
-                    RenderMode::Normal => (Color(0.5 * hit.normal.normalize()) + WHITE*0.5, None),
+                    RenderMode::Normal => (Color(0.5 * hit.normal.normalize()) + WHITE * 0.5, None),
                 };
 
                 // Whether or not light was scattered and should be recursively traced

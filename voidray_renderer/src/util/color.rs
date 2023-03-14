@@ -1,5 +1,5 @@
 use crate::vector::*;
-use std::ops::{Add, AddAssign, Mul, MulAssign};
+use std::ops::{Add, AddAssign, Div, Mul, MulAssign};
 
 pub const BLACK: Color = Color(vec3!(0.0));
 
@@ -89,5 +89,13 @@ impl Mul<f32> for Color {
 impl MulAssign<f32> for Color {
     fn mul_assign(&mut self, rhs: f32) {
         self.0.mul_assign(rhs);
+    }
+}
+
+impl Div<f32> for Color {
+    type Output = Color;
+
+    fn div(self, rhs: f32) -> Self::Output {
+        Color(self.0 / rhs)
     }
 }

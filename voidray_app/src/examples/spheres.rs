@@ -1,3 +1,5 @@
+use voidray_common::MicrofacetBSDF;
+
 use crate::examples::example_import::*;
 
 pub fn scene() -> (Scene, Settings, [u32; 2]) {
@@ -16,7 +18,7 @@ pub fn scene() -> (Scene, Settings, [u32; 2]) {
     let spheres = vec![
         (vec3!(0.5, 1.0, 4.0), red),
         (vec3!(3.15, 1.5, -0.7), yellow),
-        (vec3!(0.1, 0.6, -2.0), green),
+        (vec3!(0.6, 0.6, -2.0), green),
         (vec3!(-1.7, 1.1, -0.2), blue),
         (vec3!(1.2, 0.5, 0.4), grey),
     ];
