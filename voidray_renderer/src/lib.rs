@@ -6,6 +6,7 @@ pub mod render;
 mod util;
 
 pub use crate::core::*;
+pub use cgmath;
 pub use util::*;
 
 /// Std rand imports

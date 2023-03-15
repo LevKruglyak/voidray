@@ -3,6 +3,7 @@ use voidray_renderer::math::*;
 use voidray_renderer::preamble::*;
 use voidray_renderer::rand::*;
 
+use voidray_renderer::traits::BSDFMaterial;
 use voidray_renderer::vec3;
 
 pub struct MicrofacetBSDF {
@@ -100,7 +101,7 @@ impl MicrofacetBSDF {
 }
 
 #[allow(clippy::many_single_char_names)]
-impl MicrofacetBSDF {
+impl BSDFMaterial for MicrofacetBSDF {
     /// Bidirectional scattering distribution function
     ///
     /// - `n` - surface normal vector
@@ -116,7 +117,11 @@ impl MicrofacetBSDF {
     /// - https://graphics.stanford.edu/courses/cs148-10-summer/docs/2006--degreve--reflection_refraction.pdf
     /// - http://www.pbr-book.org/3ed-2018/materials/BSDFs.html
     /// - https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf
-    fn bsdf(&self, n: Vec3, wo: Vec3, wi: Vec3) -> Color {
+    fn bsdf(&self, n: &Vec3, wo: &Vec3, wi: &Vec3) -> Color {
+        let n = *n;
+        let wo = *wo;
+        let wi = *wi;
+
         let n_dot_wi = n.dot(wi);
         let n_dot_wo = n.dot(wo);
         let wi_outside = n_dot_wi.is_sign_positive();
@@ -214,7 +219,10 @@ impl MicrofacetBSDF {
     /// estimating the average magnitude of the Fresnel term.
     ///
     /// Reference: https://agraphicsguy.wordpress.com/2015/11/01/sampling-microfacet-brdf/
-    fn sample(&self, n: Vec3, wo: Vec3, rng: &mut ThreadRng) -> Option<(Vec3, Float)> {
+    fn sample(&self, n: &Vec3, wo: &Vec3, rng: &mut ThreadRng) -> Option<(Vec3, Float)> {
+        let n = *n;
+        let wo = *wo;
+
         let m2 = self.roughness * self.roughness;
 
         // Estimate specular contribution using Fresnel term
