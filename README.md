@@ -1,4 +1,4 @@
-# Voidray
+# Voidray [WIP]
 
 High performance, interactive, physically based Rust path tracer.
 
