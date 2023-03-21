@@ -1,13 +1,18 @@
 [workspace]
 
 members = [
-    "voidray",
-    "voidray_app",
-    "voidray_launcher",
-    "voidray_renderer",
-    "voidray_common",
+    "voidray-core",
+    "voidray-math",
 ]
 
 [profile.release]
-# lto = "fat"
+lto = "thin"
 incremental = true
+debug = true
+
+[profile.opt]
+inherits = "release"
+lto = "fat"
+codegen-units = 1
+strip = "debuginfo"
+opt-level = 3

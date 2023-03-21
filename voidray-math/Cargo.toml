@@ -1,0 +1,11 @@
+[package]
+name = "voidray-math"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+cgmath = { version = "0.18.0", features = ["swizzle", "rand"] }
+num = "0.4.0"
+
+[features]
+high_precision = []

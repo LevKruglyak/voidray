@@ -1,0 +1,16 @@
+[package]
+name = "voidray-core"
+version = "0.1.0"
+edition = "2021"
+authors = ["Lev Kruglyak <lev.kruglyak2014@gmail.com>"]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+derive_more = "0.99.17"
+enum_dispatch = "0.3.11"
+trait-set = "0.3.0"
+trait_enum = "0.5.0"
+
+voidray-math = { path = "../voidray-math/" }
