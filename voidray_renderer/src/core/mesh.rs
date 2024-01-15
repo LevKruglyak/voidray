@@ -1,3 +1,4 @@
+use std::f32::EPSILON;
 use std::fs::File;
 use std::io::BufReader;
 
@@ -200,7 +201,7 @@ impl BoundsCollection for Mesh {
                     AABB::from_point(self.vertices[triangle.vertices[2] as usize].position),
                 ),
             ),
-            0.001,
+            EPSILON,
         )
     }
 

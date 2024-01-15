@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use voidray_renderer::aabb::AABB;
-use voidray_renderer::cgmath::Rad;
+
+
 use voidray_renderer::color::*;
 use voidray_renderer::math::{near_zero, reflect, refract};
 use voidray_renderer::rand::rand_distr::UnitSphere;
@@ -11,6 +11,8 @@ use voidray_renderer::scene::{SceneAcceleration, TextureHandle};
 use voidray_renderer::texture::AbstractTexture;
 use voidray_renderer::traits::{BSDFMaterial, Material};
 use voidray_renderer::vector::*;
+
+
 
 pub struct Materials {}
 
@@ -72,10 +74,11 @@ impl BSDFMaterial for LambertianBSDF {
         to_viewer: &Vec3,
         rng: &mut ThreadRng,
     ) -> Option<(Vec3, Float)> {
-        assert!(normal.magnitude2() != 0.0);
         loop {
             let dir = Vec3::from(rng.sample(UnitSphere));
-            return Some((dir.normalize(), 1.0));
+            if dir.dot(*normal) >= 0.0 {
+                return Some((dir.normalize(), 1.0));
+            }
         }
     }
 }

@@ -2,6 +2,7 @@
 
 mod environments;
 mod microfacet;
+pub mod sampling;
 pub mod sdf;
 pub mod simple;
 mod surfaces;

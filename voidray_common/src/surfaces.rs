@@ -22,8 +22,8 @@ impl Surfaces {
             Vertex::position(q3),
             Vertex::position(q4),
         ];
-        let indices = vec![0, 1, 2, 2, 0, 3,];
-        
+        let indices = vec![0, 1, 2, 2, 0, 3];
+
         Arc::new(Mesh::from_buffers(vertices, indices))
     }
 }
@@ -92,7 +92,7 @@ impl AnalyticSurface for GroundPlane {
         }
 
         let world_pos = ray.at(t);
-        let uv = Vec2::new(world_pos.x, world_pos.z);
+        let uv = Vec2::new(world_pos.x / 10.0, world_pos.z / 10.0);
 
         Some(HitRecord::new(
             world_pos,
