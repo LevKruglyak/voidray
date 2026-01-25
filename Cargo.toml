@@ -1,7 +1,7 @@
 [workspace]
+resolver = "2"
 
 members = [
-    "voidray",
     "voidray_app",
     "voidray_launcher",
     "voidray_renderer",

@@ -23,7 +23,7 @@ pub fn iterative_render(
         .enumerate()
         .for_each(|(index, pixel)| {
             let x = index as u32 % dimensions[0];
-            let y = index as u32 / dimensions[1];
+            let y = index as u32 / dimensions[0];
 
             // Rng
             let mut rng = thread_rng();
